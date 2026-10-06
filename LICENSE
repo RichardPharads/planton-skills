@@ -1,3 +1,7 @@
+This license covers everything in this repository except the folders skills/planton/validator/ and
+skills/planton/bridge/, which are built from the Planton app's proprietary code and carry their own LICENSE.md. The
+libraries in skills/planton/bridge/node_modules/ keep their own licenses.
+
 MIT License
 
 Copyright (c) 2026 Richard Parado

@@ -94,17 +94,41 @@ This makes Planton useful for both **software development** and **everyday plann
 
 ## 📦 Installation
 
-Planton Skills can be installed into compatible coding-agent environments.
+You need [Node.js](https://nodejs.org) 22.6 or later: the skills use it to check plans and to send them to your phone.
 
-For example, with Claude Code:
+### Claude Code (recommended)
 
-```bash
-git clone https://github.com/RichardPharads/planton-skills.git
+Inside Claude Code, run:
+
+```text
+/plugin marketplace add RichardPharads/planton-skills
+/plugin install planton@planton-skills
 ```
 
-Then follow the installation instructions for your agent/environment.
+The skills are then run as `/planton:planton-gen`, `/planton:planton-connect` and so on, or simply by asking
+("make me a workflow for…"), since Claude picks the right skill on its own.
 
-> **Note:** Installation commands and paths may vary depending on the coding agent you are using.
+**Get updates automatically:** open `/plugin`, go to **Marketplaces**, pick `planton-skills` and turn on auto-update.
+Otherwise run `/plugin marketplace update planton-skills` now and then.
+
+### Other coding agents (Cursor, Codex, OpenCode and more)
+
+With the open [`skills`](https://github.com/vercel-labs/skills) installer:
+
+```bash
+npx skills add RichardPharads/planton-skills -g
+```
+
+Update with `npx skills update`. Installed this way, the skills keep their plain names (`/planton-gen`).
+
+### Where plans are saved
+
+Project plans go in a `planton/` folder in your project. To keep everyday plans (recipes, routines, trips) in one
+place, create `~/.claude/planton/config.json`:
+
+```json
+{ "plansDir": "/path/to/your/Documents/Planton" }
+```
 
 ---
 
@@ -230,31 +254,9 @@ Instead of keeping a plan buried inside a conversation, Planton turns it into so
 
 ---
 
-## 🔄 Naming
-
-The repository is currently named:
-
-```text
-planton-skills
-```
-
-Other possible names include:
-
-```text
-planton-agent
-planton-for-agents
-```
-
-However, the current installation commands and **ADR 0004** assume:
-
-```text
-RichardPharads/planton-skills
-```
-
-If the repository name changes, those references should be updated as well.
-
----
-
 ## 📄 License
 
-See the repository license for details.
+The skills are under the MIT License (see [LICENSE](LICENSE)), except two folders that are built from the Planton app's
+own code: `skills/planton/validator/` and `skills/planton/bridge/`. Each has its own `LICENSE.md`: you may install and
+run them with the Planton skills, but not reuse them elsewhere. The libraries the bridge ships keep their own licences
+([THIRD-PARTY-NOTICES.md](skills/planton/bridge/THIRD-PARTY-NOTICES.md)).

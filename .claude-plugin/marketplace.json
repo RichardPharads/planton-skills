@@ -1,0 +1,14 @@
+{
+  "name": "planton-skills",
+  "description": "The Planton skills: plans for the Planton app, written by your coding agent.",
+  "owner": {
+    "name": "Richard Parado"
+  },
+  "plugins": [
+    {
+      "name": "planton",
+      "source": "./",
+      "description": "Turn goals into Planton workflows: plan projects, routines, recipes and decisions, check them the way the app does, and send them to the Planton app on your phone."
+    }
+  ]
+}

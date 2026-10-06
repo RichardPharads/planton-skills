@@ -1,0 +1,20 @@
+{
+  "name": "planton",
+  "displayName": "Planton",
+  "version": "1.0.0",
+  "description": "Turn goals into Planton workflows: plan projects, routines, recipes and decisions, check them the way the app does, and send them to the Planton app on your phone.",
+  "author": {
+    "name": "Richard Parado",
+    "url": "https://github.com/RichardPharads"
+  },
+  "homepage": "https://github.com/RichardPharads/planton-skills",
+  "repository": "https://github.com/RichardPharads/planton-skills",
+  "license": "SEE LICENSE IN LICENSE",
+  "keywords": [
+    "planton",
+    "planning",
+    "workflows",
+    "productivity",
+    "flowchart"
+  ]
+}
