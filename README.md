@@ -27,20 +27,6 @@ The goal is simple:
 
 **Take something you want to accomplish → turn it into a workflow → work through it step by step.**
 
----
-## On your Claude Code use this command to add skills
-```bash
-# Add the skill repository to your plugin marketplace
-/plugin marketplace add RichardPharads/planton-skills
-
-# Install the specific plugin package
-/plugin install planton@planton-skills
-```
-
-## Or on your terminal use npx to install skills
-```bash
-npx skills add RichardPharads/planton-skills -g
-```
 ## 🛠️ Available Skills
 
 | Skill               | What it does                                                                  |
