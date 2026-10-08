@@ -46,6 +46,9 @@ meaning.
 | Scheduled with many cards | **Parts of the day** | Group under cards like "Morning", "Afternoon", "Evening", or one card per day for weekly plans; keep each card's own schedule |
 | Any plan | **Balance** | Split groups over 8 cards, merge groups with a single card, flatten nesting deeper than 3, make titles unique and under 60 characters |
 
+A **system map** (a Flowchart of technology cards, see [format.md](../planton/reference/format.md)) has no Start or
+End and isn't given them: ignore the analyzer's missing `start` and `end` findings for one.
+
 Trade-off to respect: in a step-by-step workflow only top-level steps lock and auto-advance; cards inside a step can be
 done in any order. So don't group strictly ordered steps just to save space — use rows instead.
 
@@ -68,12 +71,15 @@ regrouping) · "Cancel". Skip the question if the user already said to just fix 
   if the group has its own finish line. In a step-by-step plan, a stage whose cards are all already done gets
   `"status": "done"`.
 - Decision and Revisit cards stay in the stage they belong to.
-- Update `key`s and `links` so every link still points at the right cards; drop links that now duplicate a parent
-  connection.
+- Keep every existing card's `key`. Give new cards (such as new group cards) keys, and update `links` so every link
+  still points at the right cards; drop links that now duplicate a parent connection.
+- Cards a person arranged in the Planton workspace carry a `position`. Keep positions on cards you only edit. When you
+  restructure the chart (regroup, reorder, split), remove `position` from the cards you moved, so the app lays them out
+  again, and say in your final message that the layout of those cards was reset.
 - Leave the workflow's title unchanged, so re-importing updates the existing workflow instead of adding a new one.
 
 ## 6. Check and deliver
 
 Validate, run the analyzer again, and show before → after (size in phone screens and the sketch). Then save over the
 same file and deliver following [handoff.md](../planton/reference/handoff.md). Tell the user that **Update existing**
-in the app keeps their progress, and that saved flowchart positions are replaced by the new layout.
+in the app keeps their progress, and that the cards you moved are laid out again (cards you only edited keep their saved positions).

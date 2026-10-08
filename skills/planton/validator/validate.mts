@@ -2,6 +2,7 @@
 // Usage: node validate.mts <file.planton.json>
 import { readFileSync } from "node:fs";
 
+import { unknownTechIds } from "./tech-catalog.ts";
 import { parseWorkflowFile } from "./workflow-file.ts";
 
 const file = process.argv[2];
@@ -22,3 +23,10 @@ const top = mode === "steps" ? "steps" : "top-level cards";
 // A Flowchart's cards are all side by side under the workflow, so there's no separate top level to count.
 const counts = mode === "flowchart" ? `${cardCount} cards` : `${topLevelCount} ${top} · ${cardCount} cards`;
 console.log(`OK: "${title}" · ${label} · ${counts}`);
+
+const unknown = unknownTechIds(result.template.nodes);
+if (unknown.length > 0) {
+  console.log(
+    `Warning: not in Planton's technology list, so shown as plain cards: ${unknown.join(", ")}. See "Technologies" in format.md.`,
+  );
+}

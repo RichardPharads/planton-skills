@@ -1,6 +1,6 @@
 ---
 name: planton-steps
-description: Make a precise, detailed step-by-step Planton workflow — one action per step, exact amounts, times, and settings, observable "done when" checks, timers on waiting steps, and warnings for common mistakes. Use for procedures that must be followed in order and done right: recipes, baking, installing or setting something up, repairs, applications and paperwork, first-time tasks. Use planton-gen when a lighter plan is enough, planton-schedule for things that repeat, and planton for software projects.
+description: Make a precise, detailed step-by-step Planton workflow — one action per step, exact amounts, times, and settings, observable "done when" checks, timers on waiting steps, and warnings for common mistakes. Use for procedures that must be followed in order and done right — recipes, baking, installing or setting something up, repairs, applications and paperwork, first-time tasks. Use planton-gen when a lighter plan is enough, planton-schedule for things that repeat, and planton for software projects.
 ---
 
 # Planton precise step-by-step

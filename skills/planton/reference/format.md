@@ -1,7 +1,7 @@
 # Planton workflow file format (version 1)
 
-A `.planton.json` file describes one workflow. The app creates ids, positions, and timestamps on import, so the file
-never contains them. Invalid files are rejected with a message naming the exact field, e.g.
+A `.planton.json` file describes one workflow. The app creates ids and timestamps on import, so the file
+never contains them. Positions are optional: leave them out and the app lays the chart out itself. Invalid files are rejected with a message naming the exact field, e.g.
 `workflow.cards[2].title: is required`. Always run the validator before handing a file over (see handoff.md).
 
 ## Top level
@@ -34,7 +34,15 @@ never contains them. Invalid files are rejected with a message naming the exact 
 | `timerMinutes` | no | A built-in timer, 1–1440 minutes, started with one tap. Use for waiting steps. |
 | `schedule` | no | Scheduled workflows only (below). |
 | `shape` | no | Flowchart workflows only: the card's symbol (see "Flowchart shapes"). Leave it out for a Process. |
+| `tech` | no | Flowchart and free-form workflows only: the technology the card stands for, an id from "Technologies" below, e.g. `"postgresql"`. Shown with its name and logo. On a Flowchart, a database or cache with no `shape` is drawn as a cylinder. |
+| `position` | no | Flowchart and free-form workflows only: `{ "x": 120, "y": 340 }`, where a person placed the card. Never write one yourself; keep the ones a file already has (see "Updating a plan"). |
+| `version` | no | Flowchart and free-form workflows only: which version of the technology the project uses, 1–40 characters after trimming, e.g. `"16"`, `"15.2"`, `"^19.2.3"`. Read it from the repository (`package.json`, a lockfile, a Dockerfile) and leave it out when unsure. |
+| `env` | no | Flowchart and free-form workflows only: the names of the settings the card needs, e.g. `["DATABASE_URL"]`. At most 20, each capital letters, digits and underscores starting with a letter (`^[A-Z][A-Z0-9_]{0,63}$`), no repeats. Take them from `.env.example` or the code. |
 | `cards` | no | Cards inside this one. At most 4 levels deep and 400 cards in total. Not in a `flowchart`: its cards are flat. |
+
+`env` holds names only. A value (a password, a key, a connection string) never goes in a plan: the workspace checks the project's own `.env` files on the PC to show which names are set.
+
+Sharing a plan from the Planton phone app drops `version` and `env` (the phone doesn't keep them yet); the plan file in the project keeps them.
 
 ## Blocks
 
@@ -220,3 +228,86 @@ A flowchart, flat, with its flow in `links`:
   }
 }
 ```
+
+## Technologies
+
+A card's `tech` is one of these ids. For something not listed, leave `tech` out and name the card after it.
+
+| Kind | Ids |
+| --- | --- |
+| Frontend | `nextjs` Next.js, `react` React, `vue` Vue, `svelte` Svelte, `angular` Angular, `expo` Expo, `flutter` Flutter |
+| Backend | `nodejs` Node.js, `express` Express, `nestjs` NestJS, `django` Django, `fastapi` FastAPI, `laravel` Laravel, `rails` Ruby on Rails, `spring` Spring, `go` Go, `dotnet` .NET, `prisma` Prisma |
+| Database | `postgresql` PostgreSQL, `mysql` MySQL, `sqlite` SQLite, `mongodb` MongoDB, `supabase` Supabase, `firebase` Firebase |
+| Cache and queues | `redis` Redis, `rabbitmq` RabbitMQ, `kafka` Kafka |
+| Auth | `auth0` Auth0, `clerk` Clerk |
+| Payments | `stripe` Stripe, `paypal` PayPal, `polar` Polar |
+| Storage | `s3` Amazon S3, `r2` Cloudflare R2 |
+| Hosting | `vercel` Vercel, `netlify` Netlify, `aws` AWS, `gcp` Google Cloud, `docker` Docker, `cloudflare` Cloudflare |
+| AI | `claude` Claude, `openai` OpenAI |
+| Messaging | `twilio` Twilio, `resend` Resend |
+
+A **system map** is a Flowchart of technology cards, without Start or End: each card is a part of the system, its links
+say how the parts talk ("HTTP", "reads / writes", "webhook"), and its checklist is that part's setup steps, ticked
+where they're done:
+
+```json
+{
+  "format": "planton.workflow",
+  "version": 1,
+  "author": "Claude Code",
+  "workflow": {
+    "title": "Dental System: system map",
+    "description": "What the project runs on and how the parts talk.",
+    "type": "flowchart",
+    "cards": [
+      {
+        "key": "web",
+        "title": "Web app",
+        "tech": "nextjs",
+        "notes": [
+          "Patients book visits and staff run the clinic here.",
+          { "type": "checklist", "text": "Create the Next.js app", "checked": true },
+          { "type": "checklist", "text": "Add the booking page" }
+        ]
+      },
+      {
+        "key": "api",
+        "title": "API",
+        "tech": "nodejs",
+        "notes": [
+          { "type": "checklist", "text": "Set up the server", "checked": true },
+          { "type": "checklist", "text": "Add DATABASE_URL to .env.example" }
+        ]
+      },
+      {
+        "key": "db",
+        "title": "Database",
+        "tech": "postgresql",
+        "version": "16",
+        "env": ["DATABASE_URL"],
+        "notes": [{ "type": "checklist", "text": "Write the first migration" }]
+      },
+      {
+        "key": "auth",
+        "title": "Sign-in",
+        "tech": "auth0",
+        "notes": [{ "type": "checklist", "text": "Create the Auth0 application" }]
+      }
+    ],
+    "links": [
+      { "from": "web", "to": "api", "label": "HTTP" },
+      { "from": "api", "to": "db", "label": "reads / writes" },
+      { "from": "api", "to": "auth", "label": "checks tokens" }
+    ]
+  }
+}
+```
+
+## Updating a plan
+
+A person may have arranged a plan by hand in the project workspace. When you rewrite a file that already exists:
+
+- Keep every card's `key` exactly as it is, and give each new card a key from its title (`booking-page`).
+- Keep every card's `position` exactly as it is, and never add one: cards without a position are laid out for you.
+- Keep every card's `version` and `env` as they are unless the repository shows they changed.
+- Keep cards you didn't mean to change exactly as they are, including the order of their fields.

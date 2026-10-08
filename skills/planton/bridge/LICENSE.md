@@ -9,5 +9,4 @@ You may download, install and run these files, unmodified, as part of the Planto
 for the Planton app. Any other use, including copying, changing or redistributing this code or using it in other
 software, needs written permission from the copyright holder.
 
-The libraries in `node_modules/` are not covered by this notice and keep their own licences: see
-THIRD-PARTY-NOTICES.md.
+The libraries in `node_modules/`, and the third-party code bundled into the workspace page in `workspace/assets/`, are not covered by this notice and keep their own licences: see THIRD-PARTY-NOTICES.md and `workspace/THIRD-PARTY-NOTICES.txt`.

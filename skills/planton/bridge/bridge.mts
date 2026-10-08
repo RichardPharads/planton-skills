@@ -1,8 +1,8 @@
 // The Planton bridge: a small server on the PC. The Planton skills push milestones and finished plans to it
 // (push.mts), and a paired phone connects to it over the Wi-Fi to receive them. The phone can also chat with Claude
 // Code here, read-only, in the folders allowed with `connect.mts allow` (claude-runner.mts). connect.mts (/planton-connect) starts
-// it and makes pairing codes. Only the phones' WebSocket at /ws answers other machines; everything else answers this
-// PC alone. See docs/superpowers/specs/2026-10-02-claude-code-bridge-design.md.
+// it and makes pairing codes. Only the phones' WebSocket at /ws answers other machines; everything else, and a project's
+// workspace page at /w/<token>/ (workspace-routes.mts), answers this PC alone. See docs/superpowers/specs/2026-10-02-claude-code-bridge-design.md.
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { networkInterfaces } from "node:os";
@@ -51,8 +51,18 @@ import {
 } from "./bridge-protocol.ts";
 import { CHOICES_INSTRUCTIONS } from "./chat-choices.ts";
 import { runClaude } from "./claude-runner.mts";
-import { changeFolders, loadOrCreateSettings, settingsDir, writeSettings, type PairedPhone } from "./settings.mts";
+import {
+  changeFolders,
+  changeWorkspaces,
+  loadOrCreateSettings,
+  samePath,
+  settingsDir,
+  writeSettings,
+  type PairedPhone,
+} from "./settings.mts";
+import { isLocal, readBody, readJson, reply } from "./http.mts";
 import { pairingPage } from "./page.mts";
+import { workspaceRoutes } from "./workspace-routes.mts";
 
 const FIRST_PORT = Number(process.env.PLANTON_BRIDGE_PORT ?? 4444);
 /** 4444 to 4454: the first one that's free. */
@@ -488,46 +498,12 @@ setInterval(() => {
 // The local API: this PC only, with its key.
 // ---------------------------------------------------------------------------------------------------------
 
-function reply(response: ServerResponse, status: number, body: unknown) {
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
-  response.end(JSON.stringify(body));
-}
-
-/** From this PC, under its own name, so a web page can't reach the API by pointing a name at 127.0.0.1. */
-function isLocal(request: IncomingMessage): boolean {
-  const remote = request.socket.remoteAddress ?? "";
-  const host = (request.headers.host ?? "").toLowerCase().replace(/:\d+$/, "");
-  return ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote) && (host === "127.0.0.1" || host === "localhost");
-}
-
 function hasKey(request: IncomingMessage): boolean {
   return sameBytes(utf8Encode(request.headers.authorization ?? ""), utf8Encode(`Bearer ${settings.localKey}`));
 }
 
-async function readBody(request: IncomingMessage, limit: number): Promise<string | null> {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of request) {
-    size += chunk.length;
-    if (size > limit) return null;
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString("utf8");
-}
-
-async function readJson(
-  request: IncomingMessage,
-  limit: number,
-): Promise<{ ok: true; value: Record<string, unknown> } | { ok: false; status: number }> {
-  const text = await readBody(request, limit);
-  if (text === null) return { ok: false, status: 413 };
-  try {
-    const value = JSON.parse(text || "{}");
-    return value && typeof value === "object" && !Array.isArray(value) ? { ok: true, value } : { ok: false, status: 400 };
-  } catch {
-    return { ok: false, status: 400 };
-  }
-}
+const workspaceUrl = (token: string) => `http://127.0.0.1:${port}/w/${token}/`;
+const workspaceList = () => settings.workspaces.map(({ name, path, token }) => ({ name, path, url: workspaceUrl(token) }));
 
 function statusReport() {
   pruneOutbox();
@@ -544,6 +520,7 @@ function statusReport() {
     waiting: outbox.length,
     addresses: addresses(),
     folders: settings.folders.map(({ name, path }) => ({ name, path })),
+    workspaces: workspaceList(),
     lastChatProblem,
   };
 }
@@ -586,6 +563,7 @@ async function handlePage(request: IncomingMessage, response: ServerResponse, ur
 async function handle(request: IncomingMessage, response: ServerResponse) {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   if (!isLocal(request)) return reply(response, 404, { error: "not-found" });
+  if (url.pathname.startsWith("/w/")) return workspaces.handle(request, response, url);
   if (url.pathname.startsWith("/pair/")) return handlePage(request, response, url);
   if (!url.pathname.startsWith("/api/")) return reply(response, 404, { error: "not-found" });
   if (!hasKey(request)) return reply(response, 401, { error: "no-key" });
@@ -637,6 +615,19 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
       log(remove === true ? "Removed a chat folder" : "Allowed a chat folder");
       return reply(response, 200, { folders: settings.folders.map(({ name, path }) => ({ name, path })) });
     }
+    case "POST /api/workspaces": {
+      // workspace.mts: a project folder's workspace page, or (remove) not any more.
+      const body = await readJson(request, 8192);
+      const { path, remove } = body.ok ? body.value : {};
+      if (typeof path !== "string" || !isAbsolute(path)) return reply(response, 400, { error: "bad-path" });
+      const full = resolve(path);
+      if (remove !== true && !isFolder(full)) return reply(response, 400, { error: "not-a-folder" });
+      settings.workspaces = changeWorkspaces(settings.workspaces, full, remove === true);
+      saveSettings();
+      log(remove === true ? "Removed a workspace" : "Added a workspace");
+      const added = remove === true ? undefined : settings.workspaces.find((workspace) => samePath(workspace.path, full));
+      return reply(response, 200, { url: added ? workspaceUrl(added.token) : null, workspaces: workspaceList() });
+    }
     case "POST /api/forget": {
       const body = await readJson(request, 4096);
       if (!body.ok || typeof body.value.phoneId !== "string") return reply(response, 400, { error: "bad-request" });
@@ -654,6 +645,14 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
 // ---------------------------------------------------------------------------------------------------------
 // Starting and stopping.
 // ---------------------------------------------------------------------------------------------------------
+
+const workspaces = workspaceRoutes({
+  workspaces: () => settings.workspaces,
+  port: () => port,
+  phonesPaired: () => settings.phones.length,
+  pushPlan,
+  log,
+});
 
 const phoneSockets = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
 
@@ -691,6 +690,7 @@ function stop() {
   log("Stopping");
   for (const running of runningChats.values()) running.stop();
   for (const session of sessions) session.socket.close(1001);
+  workspaces.stop();
   server.close();
   setTimeout(() => process.exit(0), 200);
 }

@@ -3,7 +3,8 @@
 // docs/superpowers/specs/2026-10-03-chat-sources-design.md for why each flag is here.
 import { spawn, spawnSync, type ChildProcess, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { isAbsolute, relative } from "node:path";
+import { statSync } from "node:fs";
+import { delimiter, isAbsolute, join, relative } from "node:path";
 
 import { CHAT_NOTE_MAX, CHAT_TURN_LIMIT_MS, type ChatFailure } from "./bridge-protocol.ts";
 
@@ -147,6 +148,30 @@ export type RunOptions = {
 /** The command that runs Claude Code: `claude`, or PLANTON_CLAUDE_BIN (the tests' stand-in). */
 const command = () => process.env.PLANTON_CLAUDE_BIN || "claude";
 
+/**
+ * Whether a command would start on Windows: the file itself for a path, or one found on PATH, either as named or with one
+ * of PATHEXT's extensions (npm installs `claude` as claude.cmd). Asked before starting it, because cmd.exe reports a missing
+ * command only as an exit code (1 or 9009, by version) and a message in the system's language.
+ */
+function commandExists(name: string): boolean {
+  const extensions = ["", ...(process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)];
+  const bases = /[\\/]/.test(name)
+    ? [name]
+    : (process.env.PATH ?? "")
+        .split(delimiter)
+        .filter(Boolean)
+        .map((folder) => join(folder, name));
+  return bases.some((base) =>
+    extensions.some((extension) => {
+      try {
+        return statSync(base + extension).isFile();
+      } catch {
+        return false;
+      }
+    }),
+  );
+}
+
 /** Ends the process and everything it started. On Windows `claude` may be a .cmd run by cmd.exe, so the whole tree. */
 function end(child: ChildProcess) {
   if (child.exitCode !== null || child.signalCode !== null) return;
@@ -173,6 +198,7 @@ function runOnce(
   // UUID or a path we chose, quoted, and the question itself goes in on stdin, so the shell has nothing of the phone's
   // to read.
   const windows = process.platform === "win32";
+  if (windows && !commandExists(command())) return { done: Promise.resolve({ ok: false, reason: "no-claude" }), stop: () => {} };
   const spawnOptions = { cwd: options.folder, env, windowsHide: true, stdio: "pipe" as const };
   const child: ChildProcessWithoutNullStreams = windows
     ? spawn([command(), ...args].map((arg) => `"${arg}"`).join(" "), { ...spawnOptions, shell: true })

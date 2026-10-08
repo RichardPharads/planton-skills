@@ -73,6 +73,8 @@ export type FlowNode = {
   shape: FlowNodeType | null;
   /** Whether the card has notes or a description, which only its page shows; a Flowchart card shows a small icon. */
   hasNotes: boolean;
+  /** The card's technology id (see tech-catalog.ts), shown under its title. Null for none. */
+  tech: string | null;
 };
 
 export type StepState = "done" | "current" | "ahead";
@@ -241,6 +243,19 @@ export function resolvePositions(
   if (unplaced.length === 0) return positions;
   if (unplaced.length === nodes.length)
     return stepIds.length > 0 ? stepLayout(nodes, rootId, stepIds, layout) : treeLayout(nodes, rootId);
+
+  // A workflow card with no place of its own (a plan arranged in the workspace, which never writes one) goes where the
+  // tree layout puts it: a column left of its placed cards, midway between the highest and the lowest. A step-by-step
+  // workflow's card keeps its slot at the start of the line (0, 0), below.
+  const rootCards = nodes.filter((node) => node.parentId === rootId && positions[node.id]).map((node) => positions[node.id]);
+  if (!positions[rootId] && stepIds.length === 0 && rootCards.length > 0) {
+    const ys = rootCards.map((point) => point.y);
+    const middle = (Math.min(...ys) + Math.max(...ys)) / 2 + NODE_HEIGHT / 2;
+    positions[rootId] = {
+      x: Math.min(...rootCards.map((point) => point.x)) - NODE_WIDTH - COLUMN_GAP,
+      y: middle - ROOT_NODE_HEIGHT / 2,
+    };
+  }
 
   // In rows, a step added later takes its slot in the rows. In a line, it lines up after the step before it.
   const slots = layout === "rows" ? stepLayout(nodes, rootId, stepIds, "rows") : null;

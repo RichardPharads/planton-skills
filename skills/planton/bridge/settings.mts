@@ -11,6 +11,8 @@ import { PC_NAME_MAX, randomId } from "./bridge-protocol.ts";
 export type PairedPhone = { id: string; name: string; key: string; pairedAt: number; lastSeenAt: number | null };
 /** A folder the phone's chat may use: Claude Code runs in it, read-only. The phone sees its id and name, never its path. */
 export type ChatFolderSetting = { id: string; path: string; name: string };
+/** A project folder with a workspace page at /w/<token>/ (workspace.mts). Only this PC ever sees the token. */
+export type WorkspaceSetting = { id: string; path: string; name: string; token: string };
 export type BridgeSettings = {
   pcId: string;
   pcName: string;
@@ -18,6 +20,7 @@ export type BridgeSettings = {
   port: number | null;
   phones: PairedPhone[];
   folders: ChatFolderSetting[];
+  workspaces: WorkspaceSetting[];
 };
 
 /** ~/.claude/planton, or PLANTON_HOME when it's set (the tests use a temporary folder). */
@@ -47,6 +50,18 @@ function isChatFolder(value: unknown): value is ChatFolderSetting {
   return typeof folder.id === "string" && typeof folder.path === "string" && typeof folder.name === "string";
 }
 
+const WORKSPACE_TOKEN_MIN = 40;
+
+function isWorkspace(value: unknown): value is WorkspaceSetting {
+  if (typeof value !== "object" || value === null) return false;
+  const workspace = value as Record<string, unknown>;
+  // A token is 43 characters (randomId(nacl, 32)); a hand-edited short or empty one must never open /w/<token>/.
+  return (
+    ["id", "path", "name", "token"].every((field) => typeof workspace[field] === "string") &&
+    (workspace.token as string).length >= WORKSPACE_TOKEN_MIN
+  );
+}
+
 export function readSettings(): BridgeSettings | null {
   try {
     const raw = JSON.parse(readFileSync(settingsPath(), "utf8"));
@@ -58,6 +73,7 @@ export function readSettings(): BridgeSettings | null {
       port: Number.isInteger(raw.port) ? raw.port : null,
       phones: Array.isArray(raw.phones) ? raw.phones.filter(isPairedPhone) : [],
       folders: Array.isArray(raw.folders) ? raw.folders.filter(isChatFolder) : [],
+      workspaces: Array.isArray(raw.workspaces) ? raw.workspaces.filter(isWorkspace) : [],
     };
   } catch {
     return null;
@@ -73,6 +89,7 @@ export function loadOrCreateSettings(): BridgeSettings {
       port: null,
       phones: [],
       folders: [],
+      workspaces: [],
     }
   );
 }
@@ -82,7 +99,7 @@ const RENAME_TRIES = 10;
 const RENAME_PAUSE_MS = 50;
 
 /** Windows refuses to replace a file another process has open (a push reading it, an antivirus), so a refusal is retried. */
-function renameWhenFree(from: string, to: string) {
+export function renameWhenFree(from: string, to: string) {
   for (let attempt = 1; ; attempt++) {
     try {
       renameSync(from, to);
@@ -142,8 +159,20 @@ export function changeFolders(folders: ChatFolderSetting[], path: string, remove
   return [...kept, { id: randomId(nacl), path, name: name.slice(0, 120) }];
 }
 
+/**
+ * Adds a project's workspace, or takes it out; the workspaces afterwards. A project is matched by its full path, and one
+ * already added keeps its token, so its address stays the same and can be bookmarked.
+ */
+export function changeWorkspaces(workspaces: WorkspaceSetting[], path: string, remove: boolean): WorkspaceSetting[] {
+  const kept = workspaces.filter((workspace) => !samePath(workspace.path, path));
+  if (remove) return kept;
+  if (kept.length < workspaces.length) return workspaces;
+  const name = (basename(path) || path).slice(0, 120);
+  return [...kept, { id: randomId(nacl), path, name, token: randomId(nacl, 32) }];
+}
+
 /** Windows paths don't care about case or which slash. */
-function samePath(a: string, b: string): boolean {
+export function samePath(a: string, b: string): boolean {
   if (process.platform !== "win32") return a === b;
   const tidy = (path: string) => path.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
   return tidy(a) === tidy(b);

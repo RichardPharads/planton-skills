@@ -42,8 +42,10 @@ A missing file or field is fine: use the fallbacks below.
 - **Everyday plans** (recipes, routines, trips, learning): `<plansDir>/<slug>.planton.json`. With no `plansDir`,
   save to `planton/` in the current folder and mention that setting `plansDir` keeps everyday plans in one place.
 - `<slug>` is the title in lowercase ASCII kebab-case, e.g. `filipino-pork-adobo`.
-- When updating a plan, overwrite its own file. When creating a new plan and the name is taken by a different plan,
-  add `-2`, `-3`, ….
+- When updating a plan, overwrite its own file, but read it first: the person may have changed it in the Planton
+  workspace. Keep every card's `key` and `position` exactly as they are, give new cards keys, and never write a
+  `position` yourself (see "Updating a plan" in format.md).
+- When creating a new plan and the name is taken by a different plan, add `-2`, `-3`, ….
 
 ## 3. Validate
 

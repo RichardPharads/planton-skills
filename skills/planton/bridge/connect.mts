@@ -3,28 +3,16 @@
 // running, which phones are paired and which folders the phone's chat may use; `connect.mts stop` stops it.
 // `connect.mts allow [folder]` lets the phone ask Claude Code about a folder (the current one by default), read-only;
 // `--remove` takes it out again. --no-open (or PLANTON_NO_OPEN=1) skips the browser.
-import { spawn } from "node:child_process";
-import { mkdirSync, openSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 import { qrTerminal } from "./qr.mts";
-import { callBridge, changeFolders, loadOrCreateSettings, logPath, settingsDir, writeSettings } from "./settings.mts";
+import { isFolder, openInBrowser, startBridge, status } from "./launch.mts";
+import { callBridge, changeFolders, loadOrCreateSettings, logPath, writeSettings } from "./settings.mts";
 
-const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const words = args.filter((arg) => !arg.startsWith("--"));
 const command = words[0] ?? "start";
 const openBrowser = !args.includes("--no-open") && process.env.PLANTON_NO_OPEN !== "1";
-
-type Status = {
-  pc: { name: string };
-  port: number;
-  phones: { name: string; connected: boolean }[];
-  waiting: number;
-  folders?: { name: string; path: string }[];
-  lastChatProblem?: { at: number; reason: string; detail: string } | null;
-};
 
 /** Allows a folder for the phone's chat, or removes it: through the bridge when it's running, which owns the settings. */
 async function allow(path: string, remove: boolean): Promise<{ name: string; path: string }[] | string> {
@@ -40,55 +28,10 @@ async function allow(path: string, remove: boolean): Promise<{ name: string; pat
   return settings.folders.map(({ name, path: folder }) => ({ name, path: folder }));
 }
 
-function isFolder(path: string): boolean {
-  try {
-    return statSync(path).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
 const folderList = (folders: { name: string; path: string }[]) =>
   folders.length
     ? `Chat folders:\n${folders.map((folder) => `- ${folder.name} (${folder.path})`).join("\n")}`
     : "No chat folders yet. Run connect.mts allow in a project folder to let your phone ask Claude Code about it.";
-
-async function status(): Promise<Status | null> {
-  const reply = await callBridge("/api/status");
-  return reply?.status === 200 ? (reply.body as Status) : null;
-}
-
-async function startBridge(): Promise<Status | null> {
-  mkdirSync(settingsDir(), { recursive: true });
-  const log = openSync(logPath(), "a");
-  // Its own process, so it outlives this command and the terminal that ran it.
-  const child = spawn(process.execPath, [...process.execArgv, join(here, "bridge.mts")], {
-    detached: true,
-    stdio: ["ignore", log, log],
-    windowsHide: true,
-    env: process.env,
-  });
-  child.unref();
-  for (let attempt = 0; attempt < 50; attempt++) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const running = await status();
-    if (running) return running;
-  }
-  return null;
-}
-
-function openInBrowser(url: string) {
-  const [program, programArgs]: [string, string[]] =
-    process.platform === "win32"
-      ? ["cmd", ["/c", "start", "", url]]
-      : process.platform === "darwin"
-        ? ["open", [url]]
-        : ["xdg-open", [url]];
-  const opener = spawn(program, programArgs, { detached: true, stdio: "ignore", windowsHide: true });
-  // No opener here (xdg-open on a bare Linux, in a container): the Page: line above is enough.
-  opener.on("error", () => {});
-  opener.unref();
-}
 
 if (command === "status") {
   const running = await status();
