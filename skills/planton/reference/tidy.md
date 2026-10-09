@@ -1,22 +1,15 @@
----
-name: planton-fix
-description: Clean up a Planton workflow so its flowchart is compact and easy to follow on a phone. Measures and sketches the current flowchart, then applies the right pattern — wraps long step lists into rows, groups long flat lists into stages or themes, splits oversized groups, merges one-card groups, flattens deep nesting, prunes cluttered links, gives a Flowchart workflow one start, an end, and decisions with labelled Yes/No ways out, and fixes duplicate or overlong titles — without losing content or progress. Use when a plan looks too long, too linear, messy, or cluttered, or the user asks to fix, tidy, compact, clean up, or restructure a Planton workflow or its flowchart.
----
-
-# Planton fix
+# Tidying a plan
 
 Make a plan's flowchart compact and readable on a phone, while keeping everything the plan says and everything the
-user has already done.
-
-Read first: [format.md](../planton/reference/format.md) (especially "Flowchart layouts") and
-[handoff.md](../planton/reference/handoff.md) in the `planton` skill folder next to this one.
+user has already done. Every skill checks its own plan's shape this way before delivering it (handoff.md, step 3);
+follow this whole page when the user asks for an existing plan to be fixed, tidied, compacted or cleaned up.
 
 ## 1. Find the plan
 
 Use the file the user names. Otherwise look in the project's `planton/` folder, then in `plansDir` from the config
-(see handoff.md). If several match, ask which with AskUserQuestion. If the workflow only exists in the app, say that
-the flowchart's **Layout** button switches step-by-step workflows between rows and a single line, and that this skill
-restructures plan files — offer to recreate the plan as a file with the skill that made it.
+(see [handoff.md](handoff.md)). If several match, ask which with AskUserQuestion. If the workflow only exists in the
+app, say that the flowchart's **Layout** button switches step-by-step workflows between rows and a single line, and
+that tidying works on plan files: offer to recreate the plan as a file.
 
 ## 2. Measure
 
@@ -46,21 +39,22 @@ meaning.
 | Scheduled with many cards | **Parts of the day** | Group under cards like "Morning", "Afternoon", "Evening", or one card per day for weekly plans; keep each card's own schedule |
 | Any plan | **Balance** | Split groups over 8 cards, merge groups with a single card, flatten nesting deeper than 3, make titles unique and under 60 characters |
 
-A **system map** (a Flowchart of technology cards, see [format.md](../planton/reference/format.md)) has no Start or
-End and isn't given them: ignore the analyzer's missing `start` and `end` findings for one.
+A system overview (`"layout": "columns"`, see "Overviews and flows" in [format.md](format.md)) keeps its columns: don't
+regroup it, only balance a column of more than 8 parts. The older single-chart system map (a Flowchart of technology
+cards) has no Start or End and isn't given them: ignore the analyzer's missing `start` and `end` findings for one.
 
 Trade-off to respect: in a step-by-step workflow only top-level steps lock and auto-advance; cards inside a step can be
-done in any order. So don't group strictly ordered steps just to save space — use rows instead.
+done in any order. So don't group strictly ordered steps just to save space; use rows instead.
 
 ## 4. Propose before changing
 
-Show the user, briefly:
+When tidying a plan the user already has, show them briefly:
 
 - **Before**: the analyzer's size and sketch.
 - **After**: what you'll change (pattern, groups with their cards, renamed titles) and a sketch of the result.
 
 Then ask with AskUserQuestion, recommended first: "Apply the fix (Recommended)" · "Layout only" (just set `layout`, no
-regrouping) · "Cancel". Skip the question if the user already said to just fix it.
+regrouping) · "Cancel". Skip the question if the user already said to just fix it, or for a plan you're writing now.
 
 ## 5. Apply without losing anything
 
@@ -81,5 +75,5 @@ regrouping) · "Cancel". Skip the question if the user already said to just fix 
 ## 6. Check and deliver
 
 Validate, run the analyzer again, and show before → after (size in phone screens and the sketch). Then save over the
-same file and deliver following [handoff.md](../planton/reference/handoff.md). Tell the user that **Update existing**
-in the app keeps their progress, and that the cards you moved are laid out again (cards you only edited keep their saved positions).
+same file and deliver following [handoff.md](handoff.md). Tell the user that **Update existing** in the app keeps their
+progress, and that the cards you moved are laid out again (cards you only edited keep their saved positions).

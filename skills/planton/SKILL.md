@@ -1,6 +1,6 @@
 ---
 name: planton
-description: Plan a software project as a step-by-step Planton workflow. Interviews the developer in short rounds of multiple-choice questions (who it's for, platform, market, constraints, MVP, tech, risks), records each answer as a Decision card, and writes planton/<name>.planton.json for the Planton app. Also extends or changes an existing project plan. Use when the user asks to plan or scope a software project, decide what to build, or doesn't know its long-term direction. For everyday plans use planton-gen; for "what's next?" use planton-next; to convert existing roadmaps or tickets use planton-from-docs; for a design or tech recommendation use planton-reco.
+description: Plan a software project as a step-by-step Planton workflow. Starts from the project's own roadmap, tickets, specs or GitHub issues when it has them (keeping IDs and what's done); otherwise interviews the developer in short rounds of multiple-choice questions (who it's for, platform, market, constraints, MVP, tech, risks). Records each decision as a Decision card, comparing 2–3 options when a choice needs it, and writes planton/<name>.planton.json for the Planton app. Also extends, changes or tidies an existing project plan. Use when the user asks to plan or scope a software project, turn a roadmap or tickets into a plan, decide what to build or which stack to build it with, or doesn't know its long-term direction. For everyday plans use planton-gen; for "what's next?" use planton-next.
 ---
 
 # Planton project planner
@@ -19,9 +19,13 @@ Read these before writing a plan:
 
 Look for `planton/*.planton.json` in the project first.
 
-- **No plan yet** → [Plan a new project](#plan-a-new-project). If the project already has a ROADMAP, TICKETS, spec,
-  or issue list, suggest the `planton-from-docs` skill instead, since it keeps that work.
+- **No plan yet, and the project has a ROADMAP, TICKETS, specs or an issue list** → follow
+  [reference/from-docs.md](reference/from-docs.md), which keeps that work.
+- **No plan yet, and no such docs** → [Plan a new project](#plan-a-new-project).
 - **A plan exists and the user wants to change or extend it** → [Continue a plan](#continue-a-plan).
+- **The user wants a design or tech choice made and recorded** (an architecture, the database, hosting) → follow
+  [reference/decisions.md](reference/decisions.md).
+- **The plan looks too long or cluttered, or the user asks to tidy it** → follow [reference/tidy.md](reference/tidy.md).
 - **A plan exists and the user asks what to do next or reports progress** → follow the `planton-next` skill.
 - **The user asks how part of the project works, or wants its stack drawn** → follow the `planton-flow` skill, or the
   `planton-map` skill for the whole system.
@@ -56,8 +60,8 @@ Rules for choices:
 - Offer "Not sure yet" where a beginner might genuinely not know (market, money, long-term platform). Never force a
   decision the user can't make yet.
 - Keep descriptions to one line: the trade-off, not a lecture.
-- If a tech question needs a deeper comparison (e.g. choosing an architecture), follow the `planton-reco` skill for
-  that question, then continue the interview.
+- If a tech question needs a deeper comparison (e.g. choosing an architecture), follow
+  [reference/decisions.md](reference/decisions.md) for that question, then continue the interview.
 
 After each round, reply with a 2–3 line summary of what was decided, then save and validate the file (handoff steps
 1–3) so progress is never lost if the session ends. Stop the interview early if the user says they have enough.

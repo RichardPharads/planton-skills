@@ -37,7 +37,7 @@ A missing file or field is fine: use the fallbacks below.
 
 ## 2. Choose where to save
 
-- **Plans about the current code project** (project plans, recommendations, plans from docs, progress updates):
+- **Plans about the current code project** (project plans, decisions, plans from docs, progress updates):
   `<project root>/planton/<slug>.planton.json`.
 - **Everyday plans** (recipes, routines, trips, learning): `<plansDir>/<slug>.planton.json`. With no `plansDir`,
   save to `planton/` in the current folder and mention that setting `plansDir` keeps everyday plans in one place.
@@ -58,6 +58,15 @@ node "<skills folder>/planton/validator/validate.mts" "<file>"
 It prints `OK: …` with a summary, or the exact field that's wrong. Fix the file and run it again until it passes. If
 Node can't run it (Node older than 22.6), at least check the file parses as JSON and has
 `"format": "planton.workflow"` and `"version": 1`.
+
+Then check its shape, so it reads well on a phone:
+
+```bash
+node "<skills folder>/planton/validator/analyze.mts" "<file>"
+```
+
+When it lists findings, fix them with the patterns in [tidy.md](tidy.md) (keeping every card's content), and run both
+again. A finding you leave on purpose (a long recipe that has to stay one line of steps) is fine: say why in one line.
 
 ## 4. Deliver
 

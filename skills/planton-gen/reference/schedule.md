@@ -1,14 +1,8 @@
----
-name: planton-schedule
-description: Make a scheduled Planton workflow with real dates and times — daily routines, habits, study timetables, workout or training programs, challenges over a set number of days, care or medication times, and one-off appointments. Asks when to start (today, tomorrow, or a date), which days, what time, and for how long, then sets exact dates. Use when timing matters. For one-time ordered procedures use planton-steps; for general plans use planton-gen.
----
+# Scheduled plans (`"type": "scheduled"`)
 
-# Planton scheduled workflows
-
-Build a routine the Planton app can bring up at the right time each day.
-
-Read first: [format.md](../planton/reference/format.md) (especially "Schedules"), [writing.md](../planton/reference/writing.md),
-and [handoff.md](../planton/reference/handoff.md) in the `planton` skill folder next to this one.
+For anything with real dates and times: daily routines, habits, study timetables, workout or training programs,
+challenges over a set number of days, care or medication times, and one-off appointments. Build a routine the Planton
+app can bring up at the right time each day. Read "Schedules" in [format.md](../../planton/reference/format.md).
 
 ## 1. Know today's date
 
@@ -43,15 +37,13 @@ Ask a second round only if needed, e.g. different times for different sessions, 
 
 ## 4. Design the cards
 
-The workflow is `"type": "scheduled"`.
-
 - **One card per session or meal.** Each card has its own `schedule` ("Breakfast" at 07:00, "Lower-body workout" at
   18:00 on `[1, 3, 5]`). Its checklist is what to do *each time*, because a repeating card, and every card inside it,
   starts fresh at every occurrence.
 - **Exact contents.** A workout card lists each exercise with sets, reps and load ("Goblet squats 4×10 at 16 kg, rest
   90 s"); a meal card lists each food with its amount ("2 boiled eggs", "150 g grilled chicken"). Split a session into
   parts with headings ("Warm-up", "Main sets", "Cool-down"), each followed by its checklist. See "Be specific" in
-  [writing.md](../planton/reference/writing.md).
+  [writing.md](../../planton/reference/writing.md).
 - **Progressive programs** (e.g. a running plan that gets harder): make one card per stage with back-to-back date
   ranges ("Week 1–2: Walk-run" 2026-09-16 → 2026-09-29, "Week 3–4: Run 20 min" 2026-09-30 → 2026-10-13).
 - **Reviews and milestones**: add a weekly review card (e.g. Sunday evening) and a one-off card for the final day or
@@ -65,8 +57,7 @@ The workflow is `"type": "scheduled"`.
 - Workflow notes: overview, the date range in words ("Every day at 6:30 AM, Sep 16 – Oct 15"), and "Assumed" bullets.
 - Planton can remind the user when a card is due: tell them to turn on Settings → Reminders in the app.
 
-## 5. Confirm, then save
+## 5. Confirm before saving
 
 Show a short summary with the real dates before writing ("Starts Wed, Sep 16 · every day at 6:30 AM · ends Thu, Oct 15
-· 3 cards"). Adjust if the user corrects anything. Then save to `plansDir` (or the project's `planton/` folder for
-project routines), validate, and deliver following [handoff.md](../planton/reference/handoff.md).
+· 3 cards"). Adjust if the user corrects anything.

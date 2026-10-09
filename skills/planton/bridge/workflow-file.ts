@@ -48,6 +48,7 @@ export const ENV_NAMES_MAX = 20;
 export const VERSION_MAX = 40;
 export const PATHS_MAX = 10;
 export const PATH_MAX = 200;
+export const LANE_MAX = 40;
 /** A plan's name: its file name in the project's planton/ folder without `.planton.json` (the bridge's PLAN_FILE_PATTERN). */
 export const PLAN_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,80}$/;
 
@@ -97,6 +98,12 @@ export type WorkflowFileCard = {
    * the project's root, e.g. "app/api/login/route.ts". Checked, not stored.
    */
   paths?: string[];
+  /**
+   * Flowchart workflows only: the part of the system that does this step in a request flow ("Web app", "API",
+   * "Database"), named as on the overview. With the workflow's `layout: "lanes"` each lane is a column. Checked, not
+   * stored: only the workspace draws lanes so far.
+   */
+  lane?: string;
   cards?: WorkflowFileCard[];
 };
 
@@ -111,9 +118,10 @@ export type WorkflowFile = {
     /**
      * Step-by-step workflows: "rows" wraps the flowchart into compact rows, "line" keeps one line. Free-form workflows:
      * "columns" puts the workflow on top and its cards side by side below it, each with its own cards stacked under it (a
-     * system overview: Frontend, Backend, Services). Columns is checked, not stored: only the workspace draws it so far.
+     * system overview: Frontend, Backend, Services). Flowcharts: "lanes" draws each card's `lane` as a column (a request
+     * flow). Columns and lanes are checked, not stored: only the workspace draws them so far.
      */
-    layout?: FlowLayout | "columns";
+    layout?: FlowLayout | "columns" | "lanes";
     /**
      * Extra flowchart connections between cards, by their keys, beyond each card's link to its parent. In a Flowchart
      * workflow a link can carry a short label, like a Decision's "Yes" or "No".
@@ -161,6 +169,18 @@ function checkVersion(value: unknown, path: string): void {
   if (typeof value !== "string") fail(path, "must be text");
   const length = value.trim().length;
   if (length < 1 || length > VERSION_MAX) fail(path, `must be 1–${VERSION_MAX} characters`);
+}
+
+function checkLane(value: unknown, path: string): void {
+  if (
+    typeof value !== "string" ||
+    value.trim() !== value ||
+    value.length < 1 ||
+    value.length > LANE_MAX ||
+    /[\u0000-\u001f]/.test(value)
+  ) {
+    fail(path, `must be a part of the system's name, 1–${LANE_MAX} characters on one line`);
+  }
 }
 
 function checkPlanName(value: unknown, path: string): void {
@@ -417,6 +437,7 @@ export function parseWorkflowFile(text: string, options: { idPrefix: string; now
       if (value.env !== undefined && placed) checkEnvNames(value.env, `${path}.env`);
       if (value.opens !== undefined && placed) checkPlanName(value.opens, `${path}.opens`);
       if (value.paths !== undefined && placed) checkPaths(value.paths, `${path}.paths`);
+      if (value.lane !== undefined && placed && mode === "flowchart") checkLane(value.lane, `${path}.lane`);
       nodes.push(node);
 
       if (value.cards !== undefined && !Array.isArray(value.cards)) fail(`${path}.cards`, "must be a list");
@@ -444,9 +465,11 @@ export function parseWorkflowFile(text: string, options: { idPrefix: string; now
 
     if (workflow.layout !== undefined && mode === "freeform") {
       if (workflow.layout !== "columns") fail("workflow.layout", 'must be "columns" in a "freeform" workflow');
+    } else if (workflow.layout !== undefined && mode === "flowchart") {
+      if (workflow.layout !== "lanes") fail("workflow.layout", 'must be "lanes" in a "flowchart" workflow');
     } else if (workflow.layout !== undefined) {
       if (workflow.layout !== "rows" && workflow.layout !== "line") fail("workflow.layout", 'must be "rows" or "line"');
-      if (mode !== "steps") fail("workflow.layout", 'only applies to "steps" and "freeform" workflows');
+      if (mode !== "steps") fail("workflow.layout", 'only applies to "steps", "freeform" and "flowchart" workflows');
       root.layout = workflow.layout;
     }
 

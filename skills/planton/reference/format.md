@@ -20,7 +20,7 @@ never contains them. Positions are optional: leave them out and the app lays the
 | `type` | `"steps"`, `"freeform"`, `"scheduled"`, or `"flowchart"` (see "Choosing a type"). Default `"freeform"`. |
 | `appearance` | Optional. `{ "style": "thumbnail" \| "background", "fade": "soft" \| "medium" \| "strong" }`. There's no cover-colour field — the app gives every workflow a plain fill; the person can add a photo cover themselves. |
 | `links` | Optional. Connections between cards, by key: `[{ "from": "<card key>", "to": "<card key>", "label": "Yes" }]`. In a `flowchart` they are the whole flow (nothing is connected for you), and `label` (up to 24 characters) is drawn beside the line, e.g. a Decision's "Yes" and "No". In other types every card is already connected to its parent, so only add links across groups; `label` is ignored there. |
-| `layout` | Optional. `"steps"`: `"rows"` or `"line"` (see "Flowchart layouts"); leave it out to let the app choose. `"freeform"`: `"columns"` for a system overview (see "Overviews and flows"). |
+| `layout` | Optional. `"steps"`: `"rows"` or `"line"` (see "Flowchart layouts"); leave it out to let the app choose. `"freeform"`: `"columns"` for a system overview. `"flowchart"`: `"lanes"` for a request flow (both in "Overviews and flows"). |
 
 ## Card
 
@@ -40,11 +40,12 @@ never contains them. Positions are optional: leave them out and the app lays the
 | `env` | no | Flowchart and free-form workflows only: the names of the settings the card needs, e.g. `["DATABASE_URL"]`. At most 20, each capital letters, digits and underscores starting with a letter (`^[A-Z][A-Z0-9_]{0,63}$`), no repeats. Take them from `.env.example` or the code. |
 | `opens` | no | Flowchart and free-form workflows only: the name of another plan in the same `planton/` folder that tells this card's part in more detail, as its file name without `.planton.json`, e.g. `"flow-sign-in"` (lowercase letters, digits and dashes). See "Overviews and flows". |
 | `paths` | no | Flowchart and free-form workflows only: the files the card's part lives in, or a folder ending in `/`, relative to the project's root with forward slashes, e.g. `["app/api/login/route.ts"]`. 1–10, each up to 200 characters, never starting with `/` and never with `..` in them. Only paths that exist in the repository. |
+| `lane` | no | Flowchart workflows only: in a request flow, the part of the system that does this step, named exactly as that part's card on the overview, e.g. `"API"`. 1–40 characters on one line. See "Overviews and flows". |
 | `cards` | no | Cards inside this one. At most 4 levels deep and 400 cards in total. Not in a `flowchart`: its cards are flat. |
 
 `env` holds names only. A value (a password, a key, a connection string) never goes in a plan: the workspace checks the project's own `.env` files on the PC to show which names are set.
 
-Sharing a plan from the Planton phone app drops `version`, `env`, `opens`, `paths` and an overview's `layout` (the phone doesn't keep them yet); the plan file in the project keeps them.
+Sharing a plan from the Planton phone app drops `version`, `env`, `opens`, `paths`, `lane` and an overview's or a request flow's `layout` (the phone doesn't keep them yet, and draws a request flow as an ordinary Flowchart); the plan file in the project keeps them.
 
 ## Blocks
 
@@ -123,6 +124,9 @@ How the app draws each type:
 - **flowchart**: top to bottom, without the workflow's own card. Each card sits a row below everything that leads into
   it (a loop back up doesn't count); the first link out of a card continues its column and each other one (a
   Decision's second answer) starts a column to the right. So list the main path's links first.
+- **flowchart, `"lanes"`** (a request flow, in the workspace): the same rows, with each card in its `lane`'s column,
+  the lanes side by side in the order they first appear. A card without a `lane` joins the lane of the card it leads
+  to, so a Start and an End can leave it out.
 
 Without `layout`, step-by-step workflows with 5 or more steps use rows and shorter ones use a line. People can switch
 between rows and line in the app with the flowchart's **Layout** button. Stacked cards are joined by a rail down their
@@ -139,7 +143,15 @@ A software project's architecture is told in two kinds of plan, linked together:
 - **A flow** (one per behaviour, `planton/flow-<name>.planton.json`, written by `planton-flow`): how one part works,
   step by step. A `"flowchart"` from a Start to an End, with Decisions for the branches (token valid? Yes / No), each
   card naming its `tech` and the `paths` it happens in. Read the code to write one: what really happens, in the order
-  it happens.
+  it happens. Two kinds:
+  - **A request flow**: what the system does behind an action, a request, a webhook or a scheduled job. Add
+    `"layout": "lanes"` and give each step a `lane`, the part of the system doing it, named as that part on the
+    overview ("Web app", "API", "Database", "Sign-in"). A link crossing lanes is a call or its answer; label it with
+    what's called or what comes back (`"POST /api/login"`, `"SQL insert"`, `"verify"`, `"result"`).
+  - **A user flow**: what a person goes through. A screen is a `display` card (`paths`: its file), something the
+    person taps or types a `manual-operation` card ("Taps Sign in"), what the app does in reply a Process, an email or
+    a text sent a `document`, and each way the journey ends an `end`. Use lanes only when more than one person takes
+    part, one lane each ("Patient", "Clinic staff").
 
 The workspace draws an overview with the workflow on top and each column on a shaded lane, and a card with `opens` gets
 an Open button that leads into that plan, with the way back above it. A card may `opens` a plan that isn't written yet:
@@ -177,6 +189,43 @@ its button shows dashed, so the overview also lists what's left to explain.
       }
     ],
     "links": [{ "from": "web", "to": "api", "label": "HTTPS" }]
+  }
+}
+```
+
+A request flow it opens, in short:
+
+```json
+{
+  "format": "planton.workflow",
+  "version": 1,
+  "author": "Claude Code",
+  "workflow": {
+    "title": "How sign-in works",
+    "description": "From pressing Sign in to seeing Appointments",
+    "type": "flowchart",
+    "layout": "lanes",
+    "cards": [
+      { "key": "start", "title": "Patient presses Sign in", "shape": "start" },
+      { "key": "submit", "title": "Submit the form", "lane": "Web app", "tech": "nextjs", "paths": ["app/sign-in/page.tsx"] },
+      { "key": "receive", "title": "Receive the request", "lane": "API", "tech": "nodejs", "paths": ["app/api/login/route.ts"] },
+      { "key": "check", "title": "Check the password", "lane": "Sign-in", "tech": "auth0" },
+      { "key": "right", "title": "Password right?", "shape": "decision", "lane": "API" },
+      { "key": "wrong", "title": "Shows Wrong email or password", "shape": "end", "lane": "Web app" },
+      { "key": "store", "title": "Store the session", "shape": "database", "lane": "Database", "tech": "postgresql" },
+      { "key": "cookie", "title": "Set the session cookie", "lane": "API", "paths": ["lib/session.ts"] },
+      { "key": "open", "title": "Opens Appointments", "shape": "end", "lane": "Web app" }
+    ],
+    "links": [
+      { "from": "start", "to": "submit" },
+      { "from": "submit", "to": "receive", "label": "POST /api/login" },
+      { "from": "receive", "to": "check", "label": "verify" },
+      { "from": "check", "to": "right", "label": "result" },
+      { "from": "right", "to": "store", "label": "Yes" },
+      { "from": "right", "to": "wrong", "label": "No" },
+      { "from": "store", "to": "cookie", "label": "saved" },
+      { "from": "cookie", "to": "open", "label": "Set-Cookie" }
+    ]
   }
 }
 ```

@@ -1,22 +1,15 @@
----
-name: planton-from-docs
-description: Turn a project's existing planning docs — ROADMAP.md, TICKETS.md, TODO lists, specs, PRDs, milestone notes, or GitHub issues — into a step-by-step Planton plan without starting from scratch. Keeps ticket IDs and doc links, marks finished items done, asks only about gaps, and writes planton/<name>.planton.json. Use when a project already has written plans or issues but no Planton workflow. For a new project with no docs, use planton.
----
+# A project plan from existing docs
 
-# Planton plan from existing docs
-
-Respect the planning work already done: convert it faithfully, fill only the real gaps, and point back to the docs for
-technical detail.
-
-Read first: [format.md](../planton/reference/format.md), [writing.md](../planton/reference/writing.md), and
-[handoff.md](../planton/reference/handoff.md) in the `planton` skill folder next to this one.
+When the project already has written plans (a ROADMAP, TICKETS, TODO lists, specs, PRDs, milestone notes, GitHub
+issues), respect that work: convert it faithfully, fill only the real gaps, and point back to the docs for technical
+detail.
 
 ## 1. Find the sources
 
 Look for `ROADMAP*`, `TICKETS*`, `TODO*`, `CHANGELOG*`, `docs/**/*.md` (specs, PRDs, milestones, plans), and open or
 recently closed GitHub issues and milestones (`gh issue list --state all --limit 200` and `gh api repos/{owner}/{repo}/milestones`
-when `gh` is available and the repo has a GitHub remote). If a Planton plan already exists, switch to updating it with
-the `planton` skill's "Continue a plan" rules instead.
+when `gh` is available and the repo has a GitHub remote). If a Planton plan already exists, update it instead ("Continue
+a plan" in the `planton` skill).
 
 List what you found. If there are several candidate sources, ask which to use with AskUserQuestion (`multiSelect`).
 
@@ -51,6 +44,5 @@ becomes a "Revisit: …" card.
 
 ## 5. Save and deliver
 
-Save to `planton/<slug>.planton.json` in the project, validate, and deliver following
-[handoff.md](../planton/reference/handoff.md). Finish with counts: phases, tasks, how many were already done, and the
-gaps turned into Revisit cards.
+Save to `planton/<slug>.planton.json` in the project, validate, and deliver following [handoff.md](handoff.md). Finish
+with counts: phases, tasks, how many were already done, and the gaps turned into Revisit cards.

@@ -33,9 +33,11 @@ if (unknown.length > 0) {
   );
 }
 
-// What the importer checks but doesn't keep, read from the file itself: the plans cards open, and an overview's columns.
-type RawCard = { opens?: unknown; cards?: RawCard[] };
-const workflow = JSON.parse(text).workflow as RawCard & { layout?: unknown };
+// What the importer checks but doesn't keep, read from the file itself: the plans cards open, an overview's columns, and
+// a request flow's lanes.
+type RawCard = { key?: unknown; title?: unknown; opens?: unknown; lane?: unknown; cards?: RawCard[] };
+type RawLink = { from?: unknown; to?: unknown; label?: unknown };
+const workflow = JSON.parse(text).workflow as RawCard & { layout?: unknown; links?: RawLink[] };
 const opened = new Set<string>();
 const walk = (cards: RawCard[] | undefined) => {
   for (const card of cards ?? []) {
@@ -55,4 +57,39 @@ if (workflow.layout === "columns" && (workflow.cards?.length ?? 0) > MAX_COLUMNS
   console.log(
     `Warning: ${workflow.cards!.length} columns is too wide to read; merge some into ${MAX_COLUMNS} or fewer (see "Overviews and flows" in format.md).`,
   );
+}
+
+// A request flow's lanes are the overview's parts, by name, and a link from one lane to another names its call.
+if (workflow.layout === "lanes") {
+  const cards = workflow.cards ?? [];
+  const laneOf = new Map(
+    cards.flatMap((card) => (typeof card.key === "string" && typeof card.lane === "string" ? [[card.key, card.lane]] : [])),
+  );
+  const overviewFile = join(dirname(file), "system-map.planton.json");
+  if (existsSync(overviewFile) && !file.endsWith("system-map.planton.json")) {
+    try {
+      const overview = JSON.parse(readFileSync(overviewFile, "utf8")).workflow as RawCard & { layout?: unknown };
+      if (overview.layout === "columns") {
+        const parts = new Set((overview.cards ?? []).flatMap((column) => (column.cards ?? []).map((part) => part.title)));
+        const unknownLanes = [...new Set(laneOf.values())].filter((lane) => !parts.has(lane));
+        if (unknownLanes.length > 0) {
+          console.log(
+            `Note: lanes named differently from any part on the overview (system-map.planton.json): ${unknownLanes.join(", ")}.`,
+          );
+        }
+      }
+    } catch {
+      // An overview that doesn't read is the overview's own problem; the validator says so when it's checked.
+    }
+  }
+  const unnamed = (workflow.links ?? []).filter((link) => {
+    const from = laneOf.get(String(link.from));
+    const to = laneOf.get(String(link.to));
+    return from && to && from !== to && !(typeof link.label === "string" && link.label.trim());
+  });
+  if (unnamed.length > 0) {
+    console.log(
+      `Note: links between lanes with no label (name the call or what comes back): ${unnamed.map((link) => `${link.from} → ${link.to}`).join(", ")}.`,
+    );
+  }
 }

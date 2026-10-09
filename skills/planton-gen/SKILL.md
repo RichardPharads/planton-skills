@@ -1,9 +1,9 @@
 ---
 name: planton-gen
-description: Make a Planton workflow for any everyday goal or how-to — cooking a dish, planning a trip or event, moving house, learning a skill, a fitness or savings goal, a home project. Picks the right workflow type (step-by-step, scheduled, free-form, or flowchart), asks at most a few quick multiple-choice questions, and writes a .planton.json the Planton app imports. Use for "how to…", "help me plan…", or "make me a workflow for…" requests that aren't about a software project. For a software project use planton; for extra-precise procedures use planton-steps; for routines with dates and times use planton-schedule.
+description: Make a Planton workflow for any everyday goal or how-to — a recipe, a repair or setup, paperwork, a trip or event, moving house, learning a skill, a daily routine, habit or training program with real dates and times, a packing list or brainstorm, or a process with decisions. Picks the right type (step-by-step, scheduled, free-form or flowchart), asks a few quick multiple-choice questions, and writes a .planton.json the Planton app imports. Also tidies an existing plan whose flowchart looks long or cluttered. Use for "how to…", "help me plan…", or "make me a routine, checklist or workflow for…" requests that aren't about a software project; for a software project use planton.
 ---
 
-# Planton general planner
+# Planton everyday planner
 
 Turn an everyday goal into a Planton workflow that someone can follow on their phone.
 
@@ -12,27 +12,29 @@ Read first: [format.md](../planton/reference/format.md), [writing.md](../planton
 
 ## 1. Understand the goal
 
-Restate the goal in one line. If the request is about building or changing software, switch to the `planton` skill.
+Restate the goal in one line. If it's about building or changing software, switch to the `planton` skill. If the user
+wants an existing plan tidied, compacted or cleaned up, follow [tidy.md](../planton/reference/tidy.md) instead.
 
 ## 2. Pick the type
 
 Use the type the user asked for ("as a checklist", "free-form", "with a schedule", "as a flowchart"). Otherwise pick with
-this table:
+this table, then read that type's rules before going on:
 
-| The goal is… | Type | Then follow |
+| The goal is… | Type | Rules |
 | --- | --- | --- |
-| Done once, in a fixed order | `steps` | Step rules below |
-| Repeated at set times or tied to dates | `scheduled` | The `planton-schedule` skill, from its step 1 |
-| Many parts with no fixed order | `freeform` | The `planton-free-form` skill's structure rules |
-| A process with decisions or loops ("if it fails, try…") | `flowchart` | Flowchart rules below |
+| Done once, in a fixed order: a recipe, a repair or setup, paperwork, a learning path | `steps` | [reference/steps.md](reference/steps.md) |
+| Repeated at set times or tied to dates: a routine, habit, training program, medication, appointments | `scheduled` | [reference/schedule.md](reference/schedule.md) |
+| Many parts with no fixed order: trip ideas, packing, shopping, research, a brainstorm | `freeform` | [reference/free-form.md](reference/free-form.md) |
+| A process with decisions or loops ("if it fails, try…") | `flowchart` | [reference/flowchart.md](reference/flowchart.md) |
 
 If a goal mixes types (a recipe plus meal-prepping it every Sunday), make the main one now and offer the other as a
 follow-up plan.
 
 ## 3. Ask only what changes the plan
 
-At most one AskUserQuestion round with up to 3 questions, and none if the request already answers them. Good questions
-change quantities, order, or scope:
+At most one AskUserQuestion round with up to 3 questions (a scheduled plan's own round has 4), and none if the request
+already answers them. The type's rules list the questions that matter for it; good questions change quantities, order,
+dates or scope:
 
 | Goal | Useful questions |
 | --- | --- |
@@ -46,35 +48,15 @@ and list them in the workflow's notes under an "Assumed" heading.
 
 ## 4. Build the workflow
 
-Workflow notes:
+Follow the type's rules. Every type's workflow notes have:
 
 - A heading and a 1–2 sentence overview (what this is, total time or cost if relevant).
-- "What you need" as a checklist when there are ingredients, tools, or documents — or put that in the first step.
+- "What you need" as a checklist when there are ingredients, tools, or documents, or that in the first step.
 - "Assumed" bullets for any defaults you chose.
-
-Step rules (for `steps`):
-
-- 4–12 steps. The first gathers what's needed; the last finishes the job (serve, check, clean up, store).
-- Each step: a paragraph with exactly how to do it (amounts, times, sizes), optional "Watch for:" or "Tip:" bullets,
-  and one checkable checklist item per action, each with its own amount (usually 2–10). See "Be specific" in
-  writing.md.
-- `timerMinutes` on steps that are mostly waiting.
-- Use cards inside a step only when a step has several parallel parts (e.g. "Prepare the sides" with three sides).
-- When the user wants more precision than this, follow the `planton-steps` skill instead.
-
-Flowchart rules (for `flowchart`):
-
-- 5–15 cards, all flat (no cards inside cards). Give each a `key` and draw the flow with `links`: nothing is connected
-  for you. List the main path's links first; the app draws the first link out of a card straight down.
-- One `start` card first and an `end` card last. Every other card is a step: a `process` (leave `shape` out) or, where
-  it says something, one of the other shapes in format.md's "Flowchart shapes" (a `delay` for waiting, a `document`
-  for writing something up, a `subprocess` for a process described elsewhere).
-- A `decision` is a short question with exactly two links out, labelled "Yes" and "No". A link back to an earlier card
-  makes a loop ("No" → fix it → back to the check).
-- Titles under 40 characters, so they fit in a box; details go in the card's notes.
 
 Pick a cover that fits the topic (see format.md).
 
 ## 5. Save and deliver
 
-Everyday plans go to `plansDir`. Validate and deliver following [handoff.md](../planton/reference/handoff.md).
+Everyday plans go to `plansDir`; a plan about the current code project (a setup procedure, a team routine) goes to its
+`planton/` folder. Validate and deliver following [handoff.md](../planton/reference/handoff.md).

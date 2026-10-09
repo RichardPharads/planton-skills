@@ -448,6 +448,24 @@ export function autoLayout(nodes: FlowNode[], edges: FlowEdge[]): Positions {
  * columns of their own. Rows are as tall as their tallest card, with shorter cards centred in them.
  */
 export function flowchartLayout(nodes: FlowNode[], edges: FlowEdge[]): Positions {
+  const { row, column } = flowchartGrid(nodes, edges);
+  const rows = flowchartRows(nodes, row);
+  const positions: Positions = {};
+  for (const node of nodes) {
+    const index = row.get(node.id)!;
+    positions[node.id] = {
+      x: column.get(node.id)! * (NODE_WIDTH + FLOW_COLUMN_GAP),
+      y: rows.tops[index] + (rows.heights[index] - nodeHeight(node)) / 2,
+    };
+  }
+  return positions;
+}
+
+/**
+ * A Flowchart's grid before it becomes positions: each card's row (the longest way down to it, so it sits below
+ * everything that leads into it) and column (one chain of cards each carried on from the one above it).
+ */
+function flowchartGrid(nodes: FlowNode[], edges: FlowEdge[]): { row: Map<string, number>; column: Map<string, number> } {
   const ids = new Set(nodes.map((node) => node.id));
   const outgoing = new Map<string, string[]>(nodes.map((node) => [node.id, []]));
   const connected = new Set<string>();
@@ -507,24 +525,99 @@ export function flowchartLayout(nodes: FlowNode[], edges: FlowEdge[]): Positions
   };
   for (const id of roots) if (!column.has(id)) place(id, columns++);
 
-  const rowHeights: number[] = [];
+  return { row, column };
+}
+
+/** Each row's top and height: as tall as its tallest card, with the Flowchart's gap below. */
+function flowchartRows(nodes: FlowNode[], row: Map<string, number>): { tops: number[]; heights: number[] } {
+  const heights: number[] = [];
   for (const node of nodes) {
     const index = row.get(node.id)!;
-    rowHeights[index] = Math.max(rowHeights[index] ?? 0, nodeHeight(node));
+    heights[index] = Math.max(heights[index] ?? 0, nodeHeight(node));
   }
-  const rowTops: number[] = [];
+  const tops: number[] = [];
   let top = 0;
-  for (let index = 0; index < rowHeights.length; index++) {
-    rowTops[index] = top;
-    top += (rowHeights[index] ?? 0) + FLOW_ROW_GAP;
+  for (let index = 0; index < heights.length; index++) {
+    tops[index] = top;
+    top += (heights[index] ?? 0) + FLOW_ROW_GAP;
+  }
+  return { tops, heights };
+}
+
+/**
+ * Which lane each card of a request flow is in, and the lanes in the order they first appear. A card with no lane of
+ * its own (a Start before the web app's first step, an End after it) joins the lane of the card it leads to, or else
+ * the one it comes from; a card connected to no lane at all goes in the first.
+ */
+export function resolveLanes(
+  nodes: Pick<FlowNode, "id">[],
+  edges: Pick<FlowEdge, "source" | "target">[],
+  named: Map<string, string>,
+): { order: string[]; laneOf: Map<string, string> } {
+  const laneOf = new Map<string, string>();
+  for (const node of nodes) {
+    const lane = named.get(node.id);
+    if (lane) laneOf.set(node.id, lane);
+  }
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const node of nodes) {
+      if (laneOf.has(node.id)) continue;
+      const next = edges.find((edge) => edge.source === node.id && laneOf.has(edge.target));
+      const previous = edges.find((edge) => edge.target === node.id && laneOf.has(edge.source));
+      const lane = next ? laneOf.get(next.target) : previous ? laneOf.get(previous.source) : undefined;
+      if (lane) {
+        laneOf.set(node.id, lane);
+        changed = true;
+      }
+    }
+  }
+  const order: string[] = [];
+  for (const node of nodes) {
+    const lane = laneOf.get(node.id);
+    if (lane && !order.includes(lane)) order.push(lane);
+  }
+  if (order.length === 0) order.push("");
+  for (const node of nodes) if (!laneOf.has(node.id)) laneOf.set(node.id, order[0]);
+  return { order, laneOf };
+}
+
+/** Room between a request flow's lanes, for each lane's shading and the links running between them. */
+const LANE_GAP = 72;
+
+/**
+ * A request flow: a Flowchart whose cards each belong to a lane, a part of the system ("Web app", "API", "Database"),
+ * drawn as columns side by side in the order the lanes first appear and read top to bottom. The rows are the
+ * Flowchart's own (flowchartLayout), so a card sits below everything that leads into it and a call to another part
+ * crosses to that part's lane. Within a lane each branch keeps a column of its own, as in a Flowchart, the main path's
+ * first, so a decision's two outcomes sit side by side. `named` holds each card's own lane (resolveLanes fills in the
+ * rest).
+ */
+export function lanesLayout(nodes: FlowNode[], edges: FlowEdge[], named: Map<string, string>): Positions {
+  const { row, column } = flowchartGrid(nodes, edges);
+  const rows = flowchartRows(nodes, row);
+  const { order, laneOf } = resolveLanes(nodes, edges, named);
+
+  // Inside its lane a card keeps the Flowchart's column: each branch is a chain of its own, so a link down one branch
+  // never runs through another's cards. A lane is as wide as the chains that pass through it.
+  const slot = new Map<string, number>();
+  const laneX = new Map<string, number>();
+  let x = 0;
+  for (const lane of order) {
+    const chains = [...new Set(nodes.filter((node) => laneOf.get(node.id) === lane).map((node) => column.get(node.id)!))].sort(
+      (a, b) => a - b,
+    );
+    for (const node of nodes) if (laneOf.get(node.id) === lane) slot.set(node.id, chains.indexOf(column.get(node.id)!));
+    laneX.set(lane, x);
+    x += Math.max(1, chains.length) * (NODE_WIDTH + FLOW_COLUMN_GAP) - FLOW_COLUMN_GAP + LANE_GAP;
   }
 
   const positions: Positions = {};
   for (const node of nodes) {
     const index = row.get(node.id)!;
     positions[node.id] = {
-      x: column.get(node.id)! * (NODE_WIDTH + FLOW_COLUMN_GAP),
-      y: rowTops[index] + (rowHeights[index] - nodeHeight(node)) / 2,
+      x: laneX.get(laneOf.get(node.id)!)! + slot.get(node.id)! * (NODE_WIDTH + FLOW_COLUMN_GAP),
+      y: rows.tops[index] + (rows.heights[index] - nodeHeight(node)) / 2,
     };
   }
   return positions;

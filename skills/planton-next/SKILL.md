@@ -13,7 +13,7 @@ Read first: [format.md](../planton/reference/format.md) and [handoff.md](../plan
 ## 1. Find the plan
 
 Look for `planton/*.planton.json` in the project. With several, ask which one (AskUserQuestion). With none, offer to
-create one with `planton`, or with `planton-from-docs` if the project has a roadmap or tickets.
+create one with `planton`, which starts from the project's roadmap or tickets when it has them.
 
 ## 2. Work out where things stand
 

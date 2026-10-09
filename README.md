@@ -20,7 +20,7 @@ Planton Skills helps your agent turn different kinds of work into structured wor
 * 🔀 **Flowcharts** → Visualize decisions and processes
 * 📄 **Existing documents** → Convert roadmaps, tickets, and specs into plans
 * 💡 **Ideas & goals** → Organize goals that can be completed in any order
-* 🎯 **Recommendations** → Compare options and record the final decision
+* 🎯 **Decisions** → Compare options for your project and record the choice in its plan
 * 🗺️ **System overviews** → Draw your project's stack in columns: frontend, backend, data and services
 * 🔍 **How it works** → Trace how one feature works through your code, step by step
 * 🖥️ **Workspace in your browser** → See and edit a project's plans live on your computer
@@ -34,19 +34,18 @@ The goal is simple:
 
 | Skill               | What it does                                                                     |
 | ------------------- | -------------------------------------------------------------------------------- |
-| `planton`           | Plan a software project while recording important decisions                      |
-| `planton-gen`       | Turn everyday goals into structured workflows                                    |
-| `planton-steps`     | Create precise step-by-step procedures for recipes, setups, repairs, and more    |
-| `planton-schedule`  | Create routines and programs with real dates and times                           |
-| `planton-free-form` | Organize ideas, lists, and goals that can be completed in any order              |
-| `planton-from-docs` | Turn existing roadmaps, tickets, or specifications into a plan                   |
+| `planton`           | Plan a software project, from scratch or from its roadmap and tickets, recording each decision |
+| `planton-gen`       | Turn everyday goals into workflows: step-by-step, with dates and times, free-form or a flowchart |
 | `planton-next`      | Find the next task to work on while keeping progress up to date                  |
-| `planton-reco`      | Compare options, recommend an approach, and record the decision                  |
-| `planton-fix`       | Clean up a workflow's flowchart so it reads well on a phone                      |
 | `planton-map`       | Draw your project's system overview: its parts, technologies and settings        |
-| `planton-flow`      | Explain how one feature works, traced from the real code                         |
+| `planton-flow`      | Explain how one feature works, traced from the real code: what the system does, or what a person goes through |
 | `planton-workspace` | Open your project's plans live in the browser, to arrange and build by hand      |
 | `planton-connect`   | Pair your phone so workflows arrive in the Planton app, and chat from it         |
+
+Seven skills since 1.0.3, down from thirteen: the step-by-step, schedule and free-form skills are now part of
+`planton-gen`; plans from existing docs and recommendations are part of `planton`; and every skill tidies its own
+plan's flowchart. Ask the same way as before ("make me a morning routine", "turn our roadmap into a plan"), and the
+right skill picks it up.
 
 ---
 
@@ -172,9 +171,11 @@ Three skills help you see a software project at two levels: the whole system, an
   already ticked where the repository shows them done. Run it again later and it updates the overview while keeping
   your arrangement. It never opens your real `.env` files.
 * **`planton-flow`** answers "how does this work?" for one feature, like sign-in, checkout or a webhook. It follows
-  the real code from what starts it to every way it can end, and draws it as a flowchart: each step names the
-  technology doing it and the files it happens in, each decision shows its branches. It only draws what the code
-  does, never a step it thinks should be there. The flow is added to the overview's **How it works** column.
+  the real code from what starts it to every way it can end, and draws one of two kinds of flow: a **request flow**,
+  what the system does, with a lane for each part (web app, API, database, Stripe…) and each call between them named;
+  or a **user flow**, what a person goes through, screen by screen and tap by tap. Each step names the technology
+  doing it and the files it happens in. It only draws what the code does, never a step it thinks should be there. The
+  flow is added to the overview's **How it works** column.
 * **`planton-workspace`** opens a page on your computer showing every plan in the project's `planton/` folder, updating
   live as your agent writes them. The overview shows each column on its own lane, and a **How it works** card's Open
   button leads into its flow, with a way back. Every card shows where it stands: to do, in progress (a ring that fills
@@ -262,7 +263,8 @@ Generate a precise sequence of steps that can be followed one by one.
 "Should I use PostgreSQL or MySQL for this project?"
 ```
 
-`planton-reco` can compare the options, help determine the best choice, and record the decision as part of the workflow.
+`planton` compares two or three real options against your project, recommends one, and records your choice as a
+Decision card in the project's plan.
 
 ---
 
@@ -293,15 +295,9 @@ ends (signed in, wrong password, account locked), each step pointing to the file
 
 | Skill               | Best for                |
 | ------------------- | ----------------------- |
-| `planton`           | Software projects       |
-| `planton-gen`       | General goals           |
-| `planton-steps`     | Procedures              |
-| `planton-schedule`  | Routines & schedules    |
-| `planton-free-form` | Flexible goals & ideas  |
-| `planton-from-docs` | Existing documentation  |
+| `planton`           | Software projects, existing roadmaps, decisions |
+| `planton-gen`       | Everyday goals, procedures, routines, ideas     |
 | `planton-next`      | Progress & next actions |
-| `planton-reco`      | Decisions & comparisons |
-| `planton-fix`       | Workflow cleanup        |
 | `planton-map`       | System & architecture   |
 | `planton-flow`      | How a feature works     |
 | `planton-workspace` | Plans in your browser   |
