@@ -23,6 +23,8 @@ Look for `planton/*.planton.json` in the project first.
   or issue list, suggest the `planton-from-docs` skill instead, since it keeps that work.
 - **A plan exists and the user wants to change or extend it** → [Continue a plan](#continue-a-plan).
 - **A plan exists and the user asks what to do next or reports progress** → follow the `planton-next` skill.
+- **The user asks how part of the project works, or wants its stack drawn** → follow the `planton-flow` skill, or the
+  `planton-map` skill for the whole system.
 
 ## Plan a new project
 

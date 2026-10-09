@@ -21,7 +21,8 @@ Planton Skills helps your agent turn different kinds of work into structured wor
 * 📄 **Existing documents** → Convert roadmaps, tickets, and specs into plans
 * 💡 **Ideas & goals** → Organize goals that can be completed in any order
 * 🎯 **Recommendations** → Compare options and record the final decision
-* 🗺️ **System maps** → Draw your project's stack and how its parts connect
+* 🗺️ **System overviews** → Draw your project's stack in columns: frontend, backend, data and services
+* 🔍 **How it works** → Trace how one feature works through your code, step by step
 * 🖥️ **Workspace in your browser** → See and edit a project's plans live on your computer
 * 🔌 **Phone connection** → Send workflows directly to the Planton app, and chat with your agent from your phone
 
@@ -42,7 +43,8 @@ The goal is simple:
 | `planton-next`      | Find the next task to work on while keeping progress up to date                  |
 | `planton-reco`      | Compare options, recommend an approach, and record the decision                  |
 | `planton-fix`       | Clean up a workflow's flowchart so it reads well on a phone                      |
-| `planton-map`       | Draw your project's system: its technologies and how they connect                |
+| `planton-map`       | Draw your project's system overview: its parts, technologies and settings        |
+| `planton-flow`      | Explain how one feature works, traced from the real code                         |
 | `planton-workspace` | Open your project's plans live in the browser, to arrange and build by hand      |
 | `planton-connect`   | Pair your phone so workflows arrive in the Planton app, and chat from it         |
 
@@ -161,26 +163,34 @@ Claude Code about that project. It only reads the folder; it can't change files 
 
 ## 🗺️ See Your System
 
-Two skills help you see a software project as a whole:
+Three skills help you see a software project at two levels: the whole system, and how each part works.
 
 * **`planton-map`** reads your repository (package files, lock files, database schemas, Docker and hosting files, CI,
-  and only the variable *names* in `.env.example`) and draws a **system map**: a flowchart with one card per part
-  (your web app, API, database, sign-in, payments, hosting…), each naming its technology and version, connected by how
-  they talk. Each part carries its setup steps, already ticked where the repository shows them done. Run it again
-  later and it updates the map while keeping your arrangement. It never opens your real `.env` files.
+  and only the variable *names* in `.env.example`) and draws a **system overview**: your project's name on top, then a
+  column for each side of it (Frontend, Backend, Data, Services). Each part (your web app, API, database, sign-in,
+  payments…) names its technology and version, the settings it needs, the folder it lives in, and its setup steps,
+  already ticked where the repository shows them done. Run it again later and it updates the overview while keeping
+  your arrangement. It never opens your real `.env` files.
+* **`planton-flow`** answers "how does this work?" for one feature, like sign-in, checkout or a webhook. It follows
+  the real code from what starts it to every way it can end, and draws it as a flowchart: each step names the
+  technology doing it and the files it happens in, each decision shows its branches. It only draws what the code
+  does, never a step it thinks should be there. The flow is added to the overview's **How it works** column.
 * **`planton-workspace`** opens a page on your computer showing every plan in the project's `planton/` folder, updating
-  live as your agent writes them. Arrange cards, drag shapes and technologies (PostgreSQL, Next.js, Stripe…) from the
+  live as your agent writes them. The overview shows each column on its own lane, and a **How it works** card's Open
+  button leads into its flow, with a way back. Every card shows where it stands: to do, in progress (a ring that fills
+  as its steps are ticked) or done. Arrange cards, drag shapes and technologies (PostgreSQL, Next.js, Stripe…) from the
   palette, connect them, and edit a card's details: your changes are saved straight back into the plan files. Only
   your computer can open it.
 
 ```text
 Your repository
       ↓
-planton-map  →  planton/system-map.planton.json
+planton-map   →  planton/system-map.planton.json        (the whole system)
+planton-flow  →  planton/flow-sign-in.planton.json      (how one feature works)
       ↓
-planton-workspace  →  see it, arrange it, build on it
+planton-workspace  →  see them, open a flow from the overview, arrange, build on them
       ↓
-Planton app  →  carry it on your phone
+Planton app  →  carry them on your phone
 ```
 
 ---
@@ -262,8 +272,20 @@ Generate a precise sequence of steps that can be followed one by one.
 "Draw my project's architecture."
 ```
 
-`planton-map` turns the repository into a map of its parts (for example Next.js → PostgreSQL, Auth0 and Stripe), and
-`planton-workspace` opens it in your browser to rearrange or extend.
+`planton-map` turns the repository into an overview of its parts (for example Next.js in Frontend, an API in Backend,
+PostgreSQL in Data, Auth0 and Stripe in Services), and `planton-workspace` opens it in your browser to rearrange or
+extend.
+
+---
+
+### Understanding Code
+
+```text
+"How does sign-in work in this project?"
+```
+
+`planton-flow` traces it through the code: the form, the API route, the password check, the session, and every way it
+ends (signed in, wrong password, account locked), each step pointing to the file it happens in.
 
 ---
 
@@ -281,6 +303,7 @@ Generate a precise sequence of steps that can be followed one by one.
 | `planton-reco`      | Decisions & comparisons |
 | `planton-fix`       | Workflow cleanup        |
 | `planton-map`       | System & architecture   |
+| `planton-flow`      | How a feature works     |
 | `planton-workspace` | Plans in your browser   |
 | `planton-connect`   | Phone connection & chat |
 

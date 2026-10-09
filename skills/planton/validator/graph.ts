@@ -75,9 +75,42 @@ export type FlowNode = {
   hasNotes: boolean;
   /** The card's technology id (see tech-catalog.ts), shown under its title. Null for none. */
   tech: string | null;
+  /** Where the card stands (cardState) and how far along its own work is (getWorkProgress), for its outline, its badge
+   * and the connections into it. */
+  work: { state: CardState; done: number; total: number };
 };
 
 export type StepState = "done" | "current" | "ahead";
+
+/** Where a card stands on a chart (docs/superpowers/specs/2026-10-08-card-and-link-states-design.md). */
+export type CardState = "todo" | "doing" | "done";
+/** A connection follows the cards it joins: in place once both are done, active while it leads into work in progress. */
+export type LinkState = "planned" | "active" | "done";
+
+/**
+ * Done when the card is, or for the workflow's own card (never done by itself in a plan file) when everything in it is;
+ * in progress once it's started, some of its work is done or anything inside it has begun (getWorkProgress); otherwise
+ * to do. A card on hold (paused, failed, cancelled) is to do here: it keeps its own status look, and nothing flows into it.
+ */
+export function cardState(
+  status: NodeStatus,
+  progress: { done: number; total: number; started?: boolean },
+  isRoot: boolean,
+): CardState {
+  if (status === "done" || (isRoot && progress.total > 0 && progress.done === progress.total)) return "done";
+  if (status === "paused" || status === "failed" || status === "cancelled") return "todo";
+  return status === "in_progress" || progress.done > 0 || progress.started === true ? "doing" : "todo";
+}
+
+/**
+ * A connection between two cards is in place once both are done. One from a card to a card inside it (the workflow's
+ * own card to a step, a group to its cards) shows what the card holds, not an order of work, so it's in place as soon as
+ * the inner card is done.
+ */
+export function linkState(from: CardState, to: CardState, contains: boolean): LinkState {
+  if (to === "done" && (contains || from === "done")) return "done";
+  return to === "doing" ? "active" : "planned";
+}
 
 /**
  * How a connection is drawn. "free": an ordinary connection. The rest are the automatic track between the steps of a
@@ -92,6 +125,8 @@ export type ScheduledEdgeKind = "scheduled" | "scheduledMissed" | "scheduledDone
 
 export type FlowEdge = WorkflowEdge & {
   kind: EdgeKind;
+  /** Flowchart and free connections: drawn by how the cards they join stand (linkState). The step track has its own kinds. */
+  state?: LinkState;
   /** Scheduled workflows: the card's time, shown in a chip on the connection into it. (`label` is the stored one.) */
   timeLabel?: string;
 };
@@ -166,6 +201,51 @@ function treeLayout(nodes: WorkflowNode[], rootId: string): Positions {
 
   place(rootId, 0);
   return positions;
+}
+
+// A columns overview: room between columns for two lanes' padding and an indented card, and below the workflow's card
+// for its connections to bend into the columns.
+const COLUMNS_GAP = 88;
+const COLUMNS_DROP = 72;
+const LANE_PADDING = 16;
+
+/**
+ * A free-form workflow laid out as an overview (its file's `layout: "columns"`): the workflow's card on top, centred; its
+ * cards side by side below it, one column each; and everything inside each of those stacked under it in order, deeper
+ * levels slightly indented, as under a step.
+ */
+export function columnsLayout(nodes: Pick<WorkflowNode, "id" | "parentId">[], rootId: string): Positions {
+  const positions: Positions = {};
+  const groups = nodes.filter((node) => node.parentId === rootId);
+  const top = ROOT_NODE_HEIGHT + COLUMNS_DROP;
+  groups.forEach((group, column) => {
+    const x = column * (NODE_WIDTH + COLUMNS_GAP);
+    positions[group.id] = { x, y: top };
+    let y = top + NODE_HEIGHT + STACK_GAP;
+    const stack = (parentId: string, level: number) => {
+      for (const child of nodes) {
+        if (child.parentId !== parentId) continue;
+        positions[child.id] = { x: x + Math.min(level, MAX_STACK_INDENT_LEVELS) * STACK_INDENT, y };
+        y += NODE_HEIGHT + STACK_GAP;
+        stack(child.id, level + 1);
+      }
+    };
+    stack(group.id, 0);
+  });
+  const width = Math.max(NODE_WIDTH, groups.length * NODE_WIDTH + (groups.length - 1) * COLUMNS_GAP);
+  positions[rootId] = { x: (width - NODE_WIDTH) / 2, y: 0 };
+  return positions;
+}
+
+/** The shaded column behind a group of cards in an overview: around all of them, with some room. Null for none. */
+export function laneAround(cards: { x: number; y: number; width: number; height: number }[]): Bounds | null {
+  if (cards.length === 0) return null;
+  return {
+    minX: Math.min(...cards.map((card) => card.x)) - LANE_PADDING,
+    minY: Math.min(...cards.map((card) => card.y)) - LANE_PADDING,
+    maxX: Math.max(...cards.map((card) => card.x + card.width)) + LANE_PADDING,
+    maxY: Math.max(...cards.map((card) => card.y + card.height)) + LANE_PADDING,
+  };
 }
 
 /**
@@ -588,6 +668,30 @@ export function shapeOutline(shape: FlowNodeType, width: number, height: number,
   }
 }
 
+/**
+ * Where a card's state badge sits (its centre, in the card's own coordinates): on the shape's top-right edge, clear of
+ * the top middle, where a Flowchart's connections arrive. A rectangle's on its corner; a Decision's halfway along its
+ * upper-right side; a shape with a round right end (Start, End, Delay, Display) on that curve, 45° up.
+ */
+export function stateBadgePoint(shape: FlowNodeType | null, width: number, height: number): Point {
+  const round45 = 1 - Math.SQRT1_2;
+  switch (shape) {
+    case "decision":
+      return { x: width * 0.75, y: height * 0.25 };
+    case "start":
+    case "end":
+    case "delay":
+    case "display":
+      return { x: width - (height / 2) * round45, y: (height / 2) * round45 };
+    case "preparation":
+      return { x: width - height * 0.3, y: 0 };
+    case "database":
+      return { x: width, y: height * 0.12 };
+    default:
+      return { x: width - 2, y: 2 };
+  }
+}
+
 // Worklets become constants when compiled, so a worklet must be defined above any worklet that calls it.
 
 /** Curved connection from a node's right handle to another node's left handle (same shape as React Flow's bezier edge). */
@@ -687,6 +791,108 @@ export function edgeMidpoint(source: Point, sourceHeight: number, target: Point,
   if (kind === 0) return { x: (source.x + NODE_WIDTH + target.x) / 2, y: (startY + endY) / 2 };
   if (kind === 1) return { x: Math.min(source.x, target.x) - RAIL_GAP, y: (startY + RAIL_START_OFFSET + endY) / 2 };
   return { x: (source.x + NODE_WIDTH + RAIL_GAP + target.x - ENTRY_GAP) / 2, y: target.y - CHANNEL_GAP };
+}
+
+/** A card's box on the chart, in world space. */
+export type Box = { x: number; y: number; width: number; height: number };
+/** An overview link's route (columnsRoute): its corners in world space, and which way it arrives (1 rightward, -1 left). */
+export type ColumnsRoute = { xs: number[]; ys: number[]; dir: 1 | -1 };
+
+/** The room an overview link keeps from a card it passes. */
+const ROUTE_CLEARANCE = 6;
+
+/** Drops repeated corners and corners on a straight run, so every corner left is a real turn. */
+function squareCorners(xs: number[], ys: number[]): { xs: number[]; ys: number[] } {
+  const keptX: number[] = [];
+  const keptY: number[] = [];
+  for (let index = 0; index < xs.length; index += 1) {
+    const last = keptX.length - 1;
+    if (last >= 0 && keptX[last] === xs[index] && keptY[last] === ys[index]) continue;
+    if (last >= 1) {
+      const straight =
+        (keptX[last - 1] === keptX[last] && keptX[last] === xs[index]) ||
+        (keptY[last - 1] === keptY[last] && keptY[last] === ys[index]);
+      if (straight) {
+        keptX[last] = xs[index];
+        keptY[last] = ys[index];
+        continue;
+      }
+    }
+    keptX.push(xs[index]);
+    keptY.push(ys[index]);
+  }
+  return { xs: keptX, ys: keptY };
+}
+
+/**
+ * An overview's link between cards in different columns, in world space: out of the source's side facing the target,
+ * square turns in the gap between columns, into the target's facing side. One that would cross a card on the way (it
+ * skips a column, say Frontend to Services) leaves into the gap past its own column, runs along the free gap between
+ * rows nearest to a straight line, and turns into the target from the gap before the target's column; with no free gap
+ * it runs above or below every card. `others` is every card but these two. Null when the two overlap sideways (the
+ * same column), which routeEdgePath draws.
+ */
+export function columnsRoute(source: Box, target: Box, others: Box[]): ColumnsRoute | null {
+  const dir = target.x >= source.x + source.width ? 1 : target.x + target.width <= source.x ? -1 : 0;
+  if (dir === 0) return null;
+  const startX = dir === 1 ? source.x + source.width : source.x;
+  const endX = dir === 1 ? target.x : target.x + target.width;
+  const startY = source.y + source.height / 2;
+  const endY = target.y + target.height / 2;
+  const crosses = (x1: number, y1: number, x2: number, y2: number) =>
+    others.some(
+      (card) =>
+        Math.max(x1, x2) > card.x - ROUTE_CLEARANCE &&
+        Math.min(x1, x2) < card.x + card.width + ROUTE_CLEARANCE &&
+        Math.max(y1, y2) > card.y - ROUTE_CLEARANCE &&
+        Math.min(y1, y2) < card.y + card.height + ROUTE_CLEARANCE,
+    );
+  const clear = (xs: number[], ys: number[]) => xs.every((x, i) => i === 0 || !crosses(xs[i - 1], ys[i - 1], x, ys[i]));
+  const route = (xs: number[], ys: number[]): ColumnsRoute => ({ ...squareCorners(xs, ys), dir });
+
+  const midX = (startX + endX) / 2;
+  const direct = { xs: [startX, midX, midX, endX], ys: [startY, startY, endY, endY] };
+  if (clear(direct.xs, direct.ys)) return route(direct.xs, direct.ys);
+
+  // The turns sit in the gaps beside the two columns (an overview's columns are COLUMNS_GAP apart), or both halfway
+  // when the cards are closer than that.
+  let exitX = startX + (dir * COLUMNS_GAP) / 2;
+  let entryX = endX - (dir * COLUMNS_GAP) / 2;
+  if (dir * (entryX - exitX) < 0) {
+    exitX = midX;
+    entryX = midX;
+  }
+  // Where a run across can go: between the cards it passes, kept clear of them, nearest a straight line first.
+  const low = Math.min(exitX, entryX);
+  const high = Math.max(exitX, entryX);
+  const blocked = others
+    .filter((card) => card.x - ROUTE_CLEARANCE < high && card.x + card.width + ROUTE_CLEARANCE > low)
+    .map((card) => [card.y - ROUTE_CLEARANCE, card.y + card.height + ROUTE_CLEARANCE])
+    .sort((a, b) => a[0] - b[0]);
+  const spans: number[][] = [];
+  for (const [top, bottom] of blocked) {
+    const last = spans[spans.length - 1];
+    if (last && top <= last[1]) last[1] = Math.max(last[1], bottom);
+    else spans.push([top, bottom]);
+  }
+  const runs = [startY, endY];
+  for (let index = 0; index + 1 < spans.length; index += 1) runs.push((spans[index][1] + spans[index + 1][0]) / 2);
+  if (spans.length > 0) runs.push(spans[0][0] - LOOP_GAP, spans[spans.length - 1][1] + LOOP_GAP);
+  let best: { xs: number[]; ys: number[]; cost: number } | null = null;
+  for (const y of runs) {
+    const xs = [startX, exitX, exitX, entryX, entryX, endX];
+    const ys = [startY, startY, y, y, endY, endY];
+    const cost = Math.abs(y - startY) + Math.abs(y - endY);
+    if ((!best || cost < best.cost) && clear(xs, ys)) best = { xs, ys, cost };
+  }
+  return best ? route(best.xs, best.ys) : route(direct.xs, direct.ys);
+}
+
+/** An overview link's route drawn in world space, stopping endInset short of the target for its arrowhead. */
+export function columnsRoutePath(route: ColumnsRoute, endInset: number): string {
+  const xs = [...route.xs];
+  xs[xs.length - 1] -= route.dir * endInset;
+  return polylinePath(xs, route.ys, 0, 0, 1);
 }
 
 /**

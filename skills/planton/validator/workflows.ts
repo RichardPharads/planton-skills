@@ -351,6 +351,33 @@ function hasTerminatorType(node: WorkflowNode): boolean {
   return node.nodeType === "start" || node.nodeType === "end";
 }
 
+/**
+ * How far along a card's own work is, for where it stands on a chart (cardState in graph.ts): the cards inside it that
+ * are done and its own checklist ticked, out of both. Cancelled cards and a Flowchart's Start and End don't count.
+ * Unlike getProgress, a card with nothing inside it counts its checklist, not itself. `started` says whether anything
+ * inside it has begun (a card started or done, or a step on one ticked), so an overview's column whose parts are part
+ * way set up reads as in progress before any of them is done.
+ */
+export function getWorkProgress(data: WorkflowData, id: string): { done: number; total: number; started: boolean } {
+  const node = data.nodes[id];
+  if (!node) return { done: 0, total: 0, started: false };
+  const flowchart = getWorkflowMode(data, id) === "flowchart";
+  const inside = getDescendants(data, id).filter(
+    (card) => card.status !== "cancelled" && !(flowchart && hasTerminatorType(card)),
+  );
+  const checklist = node.blocks.filter((block) => block.type === "checklist");
+  return {
+    done: inside.filter((card) => card.status === "done").length + checklist.filter((block) => block.checked).length,
+    total: inside.length + checklist.length,
+    started: inside.some(
+      (card) =>
+        card.status === "in_progress" ||
+        card.status === "done" ||
+        card.blocks.some((block) => block.type === "checklist" && block.checked),
+    ),
+  };
+}
+
 /** A card's symbol when it's in a Flowchart workflow; null for the workflow itself and for cards in any other type. */
 export function getNodeShape(data: WorkflowData, id: string): FlowNodeType | null {
   const node = data.nodes[id];

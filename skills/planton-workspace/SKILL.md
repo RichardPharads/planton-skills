@@ -27,7 +27,8 @@ contains this skill's folder. It needs Node 22.6 or later.
    The address stays the same while the bridge keeps its port: 4444, unless something else had that port when the
    bridge started, when it's the next free one up to 4454. `workspace.mts list` always gives the current address.
 3. If the project has no `planton/` folder or no system map yet, offer once: `/planton-map` draws the project's system
-   (its stack and how the parts connect), and `/planton` plans it.
+   (an overview of its stack in columns), `/planton-flow` explains how one feature works, and `/planton` plans it. In
+   an overview, a card's Open button leads into the flow that explains it, and the top bar leads back.
 
 ## Other commands
 

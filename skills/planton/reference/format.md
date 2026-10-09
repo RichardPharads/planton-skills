@@ -20,7 +20,7 @@ never contains them. Positions are optional: leave them out and the app lays the
 | `type` | `"steps"`, `"freeform"`, `"scheduled"`, or `"flowchart"` (see "Choosing a type"). Default `"freeform"`. |
 | `appearance` | Optional. `{ "style": "thumbnail" \| "background", "fade": "soft" \| "medium" \| "strong" }`. There's no cover-colour field — the app gives every workflow a plain fill; the person can add a photo cover themselves. |
 | `links` | Optional. Connections between cards, by key: `[{ "from": "<card key>", "to": "<card key>", "label": "Yes" }]`. In a `flowchart` they are the whole flow (nothing is connected for you), and `label` (up to 24 characters) is drawn beside the line, e.g. a Decision's "Yes" and "No". In other types every card is already connected to its parent, so only add links across groups; `label` is ignored there. |
-| `layout` | Optional, `"steps"` only. `"rows"` or `"line"` (see "Flowchart layouts"). Leave it out to let the app choose. |
+| `layout` | Optional. `"steps"`: `"rows"` or `"line"` (see "Flowchart layouts"); leave it out to let the app choose. `"freeform"`: `"columns"` for a system overview (see "Overviews and flows"). |
 
 ## Card
 
@@ -38,11 +38,13 @@ never contains them. Positions are optional: leave them out and the app lays the
 | `position` | no | Flowchart and free-form workflows only: `{ "x": 120, "y": 340 }`, where a person placed the card. Never write one yourself; keep the ones a file already has (see "Updating a plan"). |
 | `version` | no | Flowchart and free-form workflows only: which version of the technology the project uses, 1–40 characters after trimming, e.g. `"16"`, `"15.2"`, `"^19.2.3"`. Read it from the repository (`package.json`, a lockfile, a Dockerfile) and leave it out when unsure. |
 | `env` | no | Flowchart and free-form workflows only: the names of the settings the card needs, e.g. `["DATABASE_URL"]`. At most 20, each capital letters, digits and underscores starting with a letter (`^[A-Z][A-Z0-9_]{0,63}$`), no repeats. Take them from `.env.example` or the code. |
+| `opens` | no | Flowchart and free-form workflows only: the name of another plan in the same `planton/` folder that tells this card's part in more detail, as its file name without `.planton.json`, e.g. `"flow-sign-in"` (lowercase letters, digits and dashes). See "Overviews and flows". |
+| `paths` | no | Flowchart and free-form workflows only: the files the card's part lives in, or a folder ending in `/`, relative to the project's root with forward slashes, e.g. `["app/api/login/route.ts"]`. 1–10, each up to 200 characters, never starting with `/` and never with `..` in them. Only paths that exist in the repository. |
 | `cards` | no | Cards inside this one. At most 4 levels deep and 400 cards in total. Not in a `flowchart`: its cards are flat. |
 
 `env` holds names only. A value (a password, a key, a connection string) never goes in a plan: the workspace checks the project's own `.env` files on the PC to show which names are set.
 
-Sharing a plan from the Planton phone app drops `version` and `env` (the phone doesn't keep them yet); the plan file in the project keeps them.
+Sharing a plan from the Planton phone app drops `version`, `env`, `opens`, `paths` and an overview's `layout` (the phone doesn't keep them yet); the plan file in the project keeps them.
 
 ## Blocks
 
@@ -125,6 +127,59 @@ How the app draws each type:
 Without `layout`, step-by-step workflows with 5 or more steps use rows and shorter ones use a line. People can switch
 between rows and line in the app with the flowchart's **Layout** button. Stacked cards are joined by a rail down their
 left side, so chains of tasks under a step read top to bottom.
+
+## Overviews and flows
+
+A software project's architecture is told in two kinds of plan, linked together:
+
+- **The overview** (one per project, `planton/system-map.planton.json`, written by `planton-map`): what the system is
+  built with. A `"freeform"` workflow with `"layout": "columns"`: the workflow is the system (its name on top), each
+  card on it is a column (Frontend, Backend, Data, Services…), and the cards inside each column are its parts, with
+  their `tech`, `version`, `env` and `paths`. A last column, "How it works", holds one card per flow, each with `opens`.
+- **A flow** (one per behaviour, `planton/flow-<name>.planton.json`, written by `planton-flow`): how one part works,
+  step by step. A `"flowchart"` from a Start to an End, with Decisions for the branches (token valid? Yes / No), each
+  card naming its `tech` and the `paths` it happens in. Read the code to write one: what really happens, in the order
+  it happens.
+
+The workspace draws an overview with the workflow on top and each column on a shaded lane, and a card with `opens` gets
+an Open button that leads into that plan, with the way back above it. A card may `opens` a plan that isn't written yet:
+its button shows dashed, so the overview also lists what's left to explain.
+
+```json
+{
+  "format": "planton.workflow",
+  "version": 1,
+  "author": "Claude Code",
+  "workflow": {
+    "title": "Dental Clinic",
+    "description": "Appointments and records for a small clinic",
+    "type": "freeform",
+    "layout": "columns",
+    "cards": [
+      {
+        "key": "frontend",
+        "title": "Frontend",
+        "cards": [{ "key": "web", "title": "Web app", "tech": "nextjs", "version": "16", "paths": ["app/"] }]
+      },
+      {
+        "key": "backend",
+        "title": "Backend",
+        "cards": [
+          { "key": "api", "title": "API", "tech": "nodejs", "version": "22", "paths": ["app/api/"] },
+          { "key": "db", "title": "Database", "tech": "postgresql", "version": "16", "env": ["DATABASE_URL"] }
+        ]
+      },
+      { "key": "services", "title": "Services", "cards": [{ "key": "auth", "title": "Sign-in", "tech": "auth0" }] },
+      {
+        "key": "how",
+        "title": "How it works",
+        "cards": [{ "key": "how-sign-in", "title": "Signing in", "opens": "flow-sign-in" }]
+      }
+    ],
+    "links": [{ "from": "web", "to": "api", "label": "HTTPS" }]
+  }
+}
+```
 
 ## Choosing a type
 
@@ -246,9 +301,10 @@ A card's `tech` is one of these ids. For something not listed, leave `tech` out 
 | AI | `claude` Claude, `openai` OpenAI |
 | Messaging | `twilio` Twilio, `resend` Resend |
 
-A **system map** is a Flowchart of technology cards, without Start or End: each card is a part of the system, its links
-say how the parts talk ("HTTP", "reads / writes", "webhook"), and its checklist is that part's setup steps, ticked
-where they're done:
+Technology cards on a Flowchart, without Start or End: each card is a part of the system, its links say how the parts
+talk ("HTTP", "reads / writes", "webhook"), and its checklist is that part's setup steps, ticked where they're done.
+This was the first kind of system map; `planton-map` now draws an overview in columns instead (see "Overviews and
+flows"), and reads a map like this one as the older kind it offers to convert:
 
 ```json
 {
