@@ -1,6 +1,6 @@
 ---
 name: planton-map
-description: Draw the current project's system as a Planton overview, its name on top and a column for each side of it (Frontend, Backend, Data, Services), each listing the technologies it runs on (Next.js, Node.js, PostgreSQL, Auth0, Stripe…) with their versions, the setting names they need and their setup steps ticked where the repository shows them done, plus a How it works column that opens the flows explaining each feature. Reads package.json, lock files, ORM schemas, docker-compose, infrastructure and CI files, framework configs, .env.example names and architecture docs, and writes planton/system-map.planton.json; run again, it updates the overview and keeps the person's arranging. Use when the user asks to map, draw, diagram or show their system, stack or architecture as a workflow or in Planton. To explain how one feature works step by step, use planton-flow; for planning what to build next, use planton.
+description: Draw the current project's system as a Planton overview, its name on top and a column for each side of it (Frontend, Backend, Data, Services), each listing the technologies it runs on (Next.js, Node.js, PostgreSQL, Auth0, Stripe…) with their versions, the setting names they need and their setup steps ticked where the repository shows them done, plus a How it works column that opens the flows explaining each feature. Reads package.json, lock files, ORM schemas, docker-compose, infrastructure and CI files, framework configs, the setting names in .env.example and the code, and architecture docs, and writes planton/system-map.planton.json; run again, it updates the overview and keeps the person's arranging. Use when the user asks to map, draw, diagram or show their system, stack or architecture as a workflow or in Planton. To explain how one feature works step by step, use planton-flow; for planning what to build next, use planton.
 ---
 
 # Draw the project's system overview
@@ -22,6 +22,8 @@ Look, in this order, and stop reading a kind of file once you know what it tells
 - `.env.example` (or `.env.sample`): **only the variable names** (the part before `=`), which say which services are
   used (`DATABASE_URL`, `STRIPE_SECRET_KEY`). Ignore anything after the `=`, since someone may have left a real value
   there, and never copy a value into the plan.
+- The settings each part's code reads, by name: search for `process.env.`, `import.meta.env.`, `os.environ` and the
+  like. Projects often read more than their `.env.example` lists, and those are the ones a new developer misses.
 - `README.md`, `docs/ARCHITECTURE.md`, ADRs: how the parts are meant to fit.
 - `planton/flow-*.planton.json`: the flows already written, for the How it works column.
 
@@ -39,6 +41,7 @@ The columns are the sides of the system, in the order a request travels through 
 | Backend | What answers them: the API, the server, background jobs and workers |
 | Data | What it keeps: the database, a cache, file storage, search |
 | Services | Outside services it calls: sign-in, payments, email, AI |
+| Hosting | Where it runs and how it ships, when the repository says: the web server, containers, CI |
 | How it works | One card per flow (step 4) |
 
 Name the columns for the project when these don't fit: a command-line tool has no Frontend, a mobile app's might be
@@ -56,10 +59,12 @@ Name the columns for the project when these don't fit: a command-line tool has n
   `package.json` (without `^` or `~`, so `"^16.0.1"` becomes `"16"`), a lock file, `pyproject.toml`, `go.mod`, a
   Dockerfile tag or the compose file's image tag (`postgres:16` is `"16"`). Leave `version` out when it isn't written
   down or the parts disagree; never guess it from memory.
-- Give each card its `env`: the names from `.env.example` or `.env.sample` that this part uses (`DATABASE_URL` on the
-  database, `STRIPE_SECRET_KEY` on payments), each a valid name (capitals, digits, underscores, starting with a
-  letter), at most 20 a card, none repeated. Names only: a value never goes in a plan. Don't check whether a name is
-  set yourself; the workspace page does that with the bridge, which reads the real `.env` files on this PC.
+- Give each card its `env`: the names this part's code reads, and those `.env.example` or `.env.sample` lists for it
+  (`DATABASE_URL` on the database, `STRIPE_SECRET_KEY` on payments), each a valid name (capitals, digits,
+  underscores, starting with a letter), at most 20 a card, none repeated; leave out ones only tests or scripts read.
+  Names only: a value never goes in a plan. Don't check whether a name is set yourself; the workspace page does that
+  with the bridge, which reads the real `.env` files on this PC. A name the code reads that `.env.example` doesn't list
+  is worth a setup step on its card ("SMTP settings listed in .env.example", unticked).
 - Give each card its `paths` when the part has a home in the repository: the folder or main file it lives in
   (`apps/web/`, `app/api/`, `prisma/schema.prisma`), relative to the project's root, only paths that exist.
 - Each card's notes: one short paragraph on what that part does here, then its setup steps as `checklist` lines,

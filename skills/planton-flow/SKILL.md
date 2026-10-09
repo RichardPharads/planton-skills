@@ -57,8 +57,9 @@ first, especially "Flowchart shapes", "Overviews and flows", "Technologies" and 
 **A request flow** has `"layout": "lanes"`: each card's `lane` is the part of the system doing it.
 
 - Name the lanes exactly as those parts' cards on the overview (`planton/system-map.planton.json`): "Web app", "API",
-  "Database", "Sign-in". With no overview, name them for the parts ("Web app", "API", "Database", "Stripe"). A service
-  outside the repository gets a lane of its own.
+  "Database", "Sign-in". A step's lane is the part whose `paths` hold its file; when one part sits inside another (a
+  Sign-in part within the API's folder), take the narrower one. With no overview, name them for the parts ("Web app",
+  "API", "Database", "Stripe"). A service outside the repository gets a lane of its own.
 - The Start may leave its lane out: it joins the lane it leads to. Order the cards so the lanes first appear in the
   order a request travels (the person's side first).
 - A link that crosses lanes is a call or its answer: label it with what's called or what comes back
@@ -85,7 +86,8 @@ Run the analyzer and fix what it lists: `node "<skills folder>/planton/validator
 ## 5. Add it to the overview
 
 - `planton/system-map.planton.json` is an overview (`"layout": "columns"`): add a card to its How it works column,
-  titled for the feature ("Sign-in", "Booking a visit") with `opens` set to the flow's name (`"flow-sign-in"`). Make
+  titled for what happens ("Signing in", "Booking a visit", so it never repeats a part's title like "Sign-in") with
+  `opens` set to the flow's name (`"flow-sign-in"`). Make
   the column, last, if it isn't there. A card that already opens this flow stays as it is. Change nothing else in the
   file ("Updating a plan" in format.md), and validate it too.
 - No overview, or the older kind of map (`"type": "flowchart"`): leave it alone and mention that `/planton-map` draws
