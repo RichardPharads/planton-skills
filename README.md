@@ -169,8 +169,9 @@ Three skills help you see a software project at two levels: the whole system, an
   project's name on top, then a column for each side of it (Frontend, Backend, Data, Services, Hosting). Each part
   (your web app, API, database, sign-in, payments…) names its technology and version, the settings it needs, the
   folder it lives in, and its setup steps, already ticked where the repository shows them done. A setting your code
-  reads that `.env.example` forgets shows up as a step to do. Run it again later and it updates the overview while
-  keeping your arrangement. It never opens your real `.env` files.
+  reads that `.env.example` forgets shows up as a step to do; one listed there commented out (`# SMTP_PASSWORD=`)
+  counts as listed. Run it again later and it updates the overview while keeping your arrangement. It never opens your
+  real `.env` files.
 * **`planton-flow`** answers "how does this work?" for one feature, like sign-in, checkout or a webhook. It follows
   the real code from what starts it to every way it can end, and draws one of two kinds of flow: a **request flow**,
   what the system does, with a lane for each part (web app, API, database, Stripe…) and each call between them named;

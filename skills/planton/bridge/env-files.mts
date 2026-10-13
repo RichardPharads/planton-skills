@@ -36,14 +36,21 @@ function closingQuote(text: string, quote: string, from: number): number {
  * Each `NAME=value` line gives NAME → whether the value is empty; the last line for a name counts. As in dotenv, a value
  * that opens a quote and doesn't close it on its line goes on to the line that does (a private key, some JSON), and the
  * lines inside it are never read as assignments; one never closed takes the rest of the file. An unquoted value ends at a
- * ` #` comment. Only names a card could list (ENV_NAME_PATTERN) are kept.
+ * ` #` comment. Only names a card could list (ENV_NAME_PATTERN) are kept. With `commented` (an example file), a line that
+ * is an assignment commented out (`# NAME=`, how examples list optional settings) gives NAME too, as empty; other comment
+ * lines are skipped either way.
  */
-export function parseEnvNames(text: string): Map<string, boolean> {
+export function parseEnvNames(text: string, { commented = false }: { commented?: boolean } = {}): Map<string, boolean> {
   const names = new Map<string, boolean>();
   const lines = text.split(/\r?\n/);
   for (let index = 0; index < lines.length; index++) {
     const trimmed = lines[index].trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (!trimmed) continue;
+    if (trimmed.startsWith("#")) {
+      const match = commented ? ASSIGNMENT.exec(trimmed.replace(/^#+\s*/, "")) : null;
+      if (match && ENV_NAME_PATTERN.test(match[1]) && !names.has(match[1])) names.set(match[1], false);
+      continue;
+    }
     const match = ASSIGNMENT.exec(trimmed);
     if (!match) continue;
     const [, name, raw] = match;
@@ -78,8 +85,11 @@ export function requestedNames(list: string | null): string[] | null {
   return [...new Set(entries.filter((name) => ENV_NAME_PATTERN.test(name)))];
 }
 
-/** A file's names; "unreadable" for one that is there but too big or can't be read; null for one that isn't there. */
-function readNames(project: string, name: string): Map<string, boolean> | "unreadable" | null {
+/**
+ * A file's names (an example file's commented-out ones too); "unreadable" for one that is there but too big or can't be
+ * read; null for one that isn't there.
+ */
+function readNames(project: string, name: string, example: boolean): Map<string, boolean> | "unreadable" | null {
   let path = join(project, name);
   try {
     if (lstatSync(path).isSymbolicLink()) {
@@ -94,7 +104,7 @@ function readNames(project: string, name: string): Map<string, boolean> | "unrea
   }
   try {
     if (statSync(path).size > MAX_BYTES) return "unreadable";
-    return parseEnvNames(readFileSync(path, "utf8"));
+    return parseEnvNames(readFileSync(path, "utf8"), { commented: example });
   } catch {
     return "unreadable";
   }
@@ -104,7 +114,20 @@ function readNames(project: string, name: string): Map<string, boolean> | "unrea
  * `git check-ignore` for all the files in one call: it prints the ignored ones and exits 0, or 1 when none is; anything
  * else (no repository, no git) can't be told, for any of them.
  */
+/** git's answers, kept a few seconds: the page asks again on every change and every return of focus. */
+const IGNORED_FOR_MS = 5000;
+const ignoredCache = new Map<string, { at: number; answers: Map<string, boolean | null> }>();
+
 function gitignored(project: string, files: string[], gitEnv: Record<string, string>): Map<string, boolean | null> {
+  const key = JSON.stringify([project, files, gitEnv]);
+  const kept = ignoredCache.get(key);
+  if (kept && Date.now() - kept.at < IGNORED_FOR_MS) return new Map(kept.answers);
+  const answers = askGit(project, files, gitEnv);
+  ignoredCache.set(key, { at: Date.now(), answers });
+  return new Map(answers);
+}
+
+function askGit(project: string, files: string[], gitEnv: Record<string, string>): Map<string, boolean | null> {
   const answers = new Map<string, boolean | null>(files.map((file) => [file, null]));
   if (files.length === 0) return answers;
   // The repository is found from the project's folder, so a package inside a monorepo gets its repository's answer; one
@@ -116,6 +139,9 @@ function gitignored(project: string, files: string[], gitEnv: Record<string, str
     encoding: "utf8",
     timeout: 5000,
     env: { ...rest, ...gitEnv },
+    // The bridge runs with no console of its own, so on Windows each git would open a console window of its own: one
+    // flashing up on every request, and with the page asking again whenever it gets the focus back, without end.
+    windowsHide: true,
   });
   if (result.status !== 0 && result.status !== 1) return answers;
   const ignored = new Set(result.stdout.split(/\r?\n/).map((line) => line.trim()));
@@ -134,11 +160,11 @@ export function projectEnv(project: string, wanted: string[], gitEnv: Record<str
   );
   const listed: string[] = [];
   for (const file of [...SET_FILES, ...EXAMPLE_FILES]) {
-    const names = readNames(project, file);
+    const example = EXAMPLE_FILES.includes(file);
+    const names = readNames(project, file, example);
     if (names === null) continue;
     listed.push(file);
     if (names === "unreadable") continue;
-    const example = EXAMPLE_FILES.includes(file);
     for (const [name, filled] of names) {
       const entry = state.get(name);
       if (!entry) continue;

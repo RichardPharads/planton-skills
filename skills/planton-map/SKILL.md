@@ -20,8 +20,9 @@ Look, in this order, and stop reading a kind of file once you know what it tells
 - `docker-compose.yml`, `Dockerfile`, infrastructure files (`*.tf`, `vercel.json`, `netlify.toml`, `fly.toml`,
   `wrangler.toml`), CI workflows: hosting and the services that run beside the app.
 - `.env.example` (or `.env.sample`): **only the variable names** (the part before `=`), which say which services are
-  used (`DATABASE_URL`, `STRIPE_SECRET_KEY`). Ignore anything after the `=`, since someone may have left a real value
-  there, and never copy a value into the plan.
+  used (`DATABASE_URL`, `STRIPE_SECRET_KEY`). A name commented out (`# TWILIO_AUTH_TOKEN=`) is listed too: that's how
+  examples show optional settings, so search the file for the names, not only its uncommented lines. Ignore anything
+  after the `=`, since someone may have left a real value there, and never copy a value into the plan.
 - The settings each part's code reads, by name: search for `process.env.`, `import.meta.env.`, `os.environ` and the
   like. Projects often read more than their `.env.example` lists, and those are the ones a new developer misses.
 - `README.md`, `docs/ARCHITECTURE.md`, ADRs: how the parts are meant to fit.
@@ -63,8 +64,8 @@ Name the columns for the project when these don't fit: a command-line tool has n
   (`DATABASE_URL` on the database, `STRIPE_SECRET_KEY` on payments), each a valid name (capitals, digits,
   underscores, starting with a letter), at most 20 a card, none repeated; leave out ones only tests or scripts read.
   Names only: a value never goes in a plan. Don't check whether a name is set yourself; the workspace page does that
-  with the bridge, which reads the real `.env` files on this PC. A name the code reads that `.env.example` doesn't list
-  is worth a setup step on its card ("SMTP settings listed in .env.example", unticked).
+  with the bridge, which reads the real `.env` files on this PC. A name the code reads that `.env.example` doesn't list,
+  commented out or not, is worth a setup step on its card ("SMTP settings listed in .env.example", unticked).
 - Give each card its `paths` when the part has a home in the repository: the folder or main file it lives in
   (`apps/web/`, `app/api/`, `prisma/schema.prisma`), relative to the project's root, only paths that exist.
 - Each card's notes: one short paragraph on what that part does here, then its setup steps as `checklist` lines,
